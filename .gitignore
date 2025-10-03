@@ -1,4 +1,5 @@
 task.txt
+.env_sys
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
