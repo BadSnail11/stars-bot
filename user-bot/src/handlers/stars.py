@@ -88,59 +88,6 @@ def get_router(session_maker: async_sessionmaker) -> Router:
             reply_markup=payment_methods_kb(BTN_PAY_SBP, BTN_PAY_TON, BTN_PAY_OTHER, BTN_CANCEL)
         )
 
-        # data = await state.get_data()
-        # recipient = data.get("recipient")
-
-        # wallet = os.getenv("TON_WALLET")
-        # if not wallet:
-        #     await m.answer("Кошелёк TON не настроен. Обратитесь в поддержку.")
-        #     await state.clear()
-        #     return
-
-        # async with session_maker() as session:
-        #     users = UsersRepo(session)
-        #     orders = OrdersRepo(session)
-        #     user = await users.upsert_from_telegram(m.from_user)
-
-        #     # цена 1 звезды в TON
-        #     price_per_star_ton = await get_star_price_in_ton(session)  # Decimal
-        #     total_ton = calc_ton_for_stars(qty, price_per_star_ton)    # Decimal
-
-        #     memo_prefix = os.getenv("TON_MEMO_PREFIX", "INV-")
-        #     memo = f"{memo_prefix}{m.from_user.id}-{m.message_id}"
-
-        #     # создаём заказ pending
-        #     # order = await orders.create_pending_ton_order(
-        #     #     user_id=user.id,
-        #     #     username=user.username,
-        #     #     stars_qty=qty,
-        #     #     recipient=recipient,
-        #     #     amount_ton=float(total_ton),
-        #     #     memo=memo,
-        #     #     wallet=wallet,
-        #     # )
-        #     order = await orders.create_pending_ton_order(
-        #         user_id=user.id,
-        #         username=user.username,
-        #         recipient=recipient,
-        #         type="stars",
-        #         amount=qty,
-        #         price=float(total_ton),
-        #         memo=memo,
-        #         wallet=wallet
-        #     )
-
-        # await state.clear()
-        # await m.answer(
-        #     f"Заказ №{order.id}: {qty} ⭐\n"
-        #     "🔐 Платёж (TON)\n"
-        #     f"➤ Адрес: <code>{wallet}</code>\n"
-        #     f"➤ Сумма: <code>{total_ton}</code> TON\n"
-        #     f"➤ Комментарий (TAG/MEMO): <code>{memo}</code>\n\n"
-        #     "Важно: укажите комментарий <b>точно</b>, иначе платёж не будет найден автоматически.",
-        #     disable_web_page_preview=True
-        # )
-
     @router.callback_query(F.data == BTN_PAY_TON)
     async def pay_ton(cb: types.CallbackQuery, state: FSMContext):
         data = await state.get_data()

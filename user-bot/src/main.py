@@ -6,7 +6,7 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 
 from .db import init_engine, close_engine, get_session_maker
-from .handlers import start, menu, crypto, stars
+from .handlers import start, menu, stars, premium
 from .utils import on_startup_banner
 
 LOG_LEVEL = os.getenv("BOT_LOG_LEVEL", "INFO").upper()
@@ -29,6 +29,7 @@ async def main():
     dp.include_router(menu.get_router(session_maker))
     # dp.include_router(crypto.get_router(session_maker))
     dp.include_router(stars.get_router(session_maker))
+    dp.include_router(premium.get_router(session_maker))
 
     await on_startup_banner(bot)
 
