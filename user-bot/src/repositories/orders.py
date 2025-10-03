@@ -15,7 +15,7 @@ class OrdersRepo:
         """
         Создаёт заказ в статусе pending для оплаты TON.
         """
-        payload = {"wallet": wallet, "memo": memo, "network": "TON", "amount": amount, "recipient": recipient}
+        payload = {"wallet": wallet, "memo": memo, "network": "TON", "type": type, "amount": amount, "recipient": recipient}
         res = await self.session.execute(
             insert(Order).values(
                 user_id=user_id,
@@ -35,24 +35,23 @@ class OrdersRepo:
         order = res.scalar_one()
         await self.session.commit()
         return order
-
-    # async def mark_paid(self, order_id: int, tx_hash: str, income: float | None = None):
-    #     """
-    #     Отмечает заказ как оплаченный и сохраняет tx_hash.
-    #     """
-    #     await self.session.execute(
-    #         update(Order)
-    #         .where(Order.id == order_id)
-    #         .values(
-    #             status="paid",
-    #             paid_at=func.now(),
-    #             income=income,
-    #             gateway_payload=func.jsonb_set(
-    #                 Order.gateway_payload, "{tx_hash}", func.to_jsonb(tx_hash), True
-    #             ),
-    #         )
-    #     )
-    #     await self.session.commit()
+    
+    async def create_pending_sbp_order(
+        self, user_id: int, username: str | None, recipient: str | None, type: str, amount: float, price: float, transaction_id: str, redirect_url: str
+    ) -> Order:
+        payload = {"provider": "platega", "paymentMethod": "SBP", "redirect": redirect_url,
+                   "transactionId": transaction_id, "type": type, "amount": amount, "recipient": recipient}
+        res = await self.session.execute(
+            insert(Order).values(
+                user_id=user_id, username=username, recipient=recipient,
+                type=type, amount=amount, price=price,
+                income=None, currency="RUB", status="pending",
+                message=None, gateway_payload=payload, created_at=func.now(),
+            ).returning(Order)
+        )
+        order = res.scalar_one()
+        await self.session.commit()
+        return order
     
     async def mark_paid(self, order_id: int, tx_hash: str, income: float | None = None):
         # безопасно мёржим {"tx_hash": "<...>"} в gateway_payload

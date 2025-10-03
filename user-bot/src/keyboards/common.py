@@ -36,3 +36,11 @@ def cancel_kb(cancel_cb: str):
     kb = InlineKeyboardBuilder()
     kb.button(text="Отмена", callback_data=cancel_cb)
     return kb.as_markup()
+
+def payment_methods_kb(sbp_cb: str, ton_cb: str, other_cb: str, cancel_cb: str):
+    kb = InlineKeyboardBuilder()
+    kb.button(text="🏦 СБП", callback_data=sbp_cb)
+    kb.button(text="💎 TON", callback_data=ton_cb)
+    kb.button(text="🪙 Другая крипта", callback_data=other_cb)
+    kb.button(text="Отмена", callback_data=cancel_cb)
+    return kb.as_markup()

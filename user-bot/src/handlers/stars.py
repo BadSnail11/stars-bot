@@ -8,18 +8,25 @@ import os, asyncio
 
 from ..repositories.users import UsersRepo
 from ..repositories.orders import OrdersRepo
-from ..services.pricing import get_star_price_in_ton, calc_ton_for_stars
+from ..services.pricing import get_star_price_in_ton, calc_ton_for_stars, get_star_price_in_rub, calc_rub_for_stars
 from ..services.ton import wait_ton_payment
-from ..keyboards.common import who_kb, cancel_kb, main_menu_kb
+from ..services.platega import create_sbp_invoice, wait_payment_confirmed
+from ..keyboards.common import who_kb, cancel_kb, main_menu_kb, payment_methods_kb
 
 class BuyStars(StatesGroup):
     choose_target = State()
     enter_recipient = State()
     enter_qty = State()
+    choose_payment = State()
 
 BTN_SELF = "buy_stars_self"
 BTN_GIFT = "buy_stars_gift"
 BTN_CANCEL = "buy_stars_cancel"
+
+
+BTN_PAY_SBP   = "pay_sbp"
+BTN_PAY_TON   = "pay_ton"
+BTN_PAY_OTHER = "pay_other"
 
 def get_router(session_maker: async_sessionmaker) -> Router:
     router = Router(name="stars")
@@ -73,38 +80,89 @@ def get_router(session_maker: async_sessionmaker) -> Router:
         if qty < 50:
             await m.answer("Минимум 50. Укажите количество ≥ 50.", reply_markup=cancel_kb(BTN_CANCEL))
             return
+        
+        await state.update_data(qty=qty)
+        await state.set_state(BuyStars.choose_payment)
+        await m.answer(
+            f"Окей, {qty} ⭐.\nВыберите способ оплаты:",
+            reply_markup=payment_methods_kb(BTN_PAY_SBP, BTN_PAY_TON, BTN_PAY_OTHER, BTN_CANCEL)
+        )
 
+        # data = await state.get_data()
+        # recipient = data.get("recipient")
+
+        # wallet = os.getenv("TON_WALLET")
+        # if not wallet:
+        #     await m.answer("Кошелёк TON не настроен. Обратитесь в поддержку.")
+        #     await state.clear()
+        #     return
+
+        # async with session_maker() as session:
+        #     users = UsersRepo(session)
+        #     orders = OrdersRepo(session)
+        #     user = await users.upsert_from_telegram(m.from_user)
+
+        #     # цена 1 звезды в TON
+        #     price_per_star_ton = await get_star_price_in_ton(session)  # Decimal
+        #     total_ton = calc_ton_for_stars(qty, price_per_star_ton)    # Decimal
+
+        #     memo_prefix = os.getenv("TON_MEMO_PREFIX", "INV-")
+        #     memo = f"{memo_prefix}{m.from_user.id}-{m.message_id}"
+
+        #     # создаём заказ pending
+        #     # order = await orders.create_pending_ton_order(
+        #     #     user_id=user.id,
+        #     #     username=user.username,
+        #     #     stars_qty=qty,
+        #     #     recipient=recipient,
+        #     #     amount_ton=float(total_ton),
+        #     #     memo=memo,
+        #     #     wallet=wallet,
+        #     # )
+        #     order = await orders.create_pending_ton_order(
+        #         user_id=user.id,
+        #         username=user.username,
+        #         recipient=recipient,
+        #         type="stars",
+        #         amount=qty,
+        #         price=float(total_ton),
+        #         memo=memo,
+        #         wallet=wallet
+        #     )
+
+        # await state.clear()
+        # await m.answer(
+        #     f"Заказ №{order.id}: {qty} ⭐\n"
+        #     "🔐 Платёж (TON)\n"
+        #     f"➤ Адрес: <code>{wallet}</code>\n"
+        #     f"➤ Сумма: <code>{total_ton}</code> TON\n"
+        #     f"➤ Комментарий (TAG/MEMO): <code>{memo}</code>\n\n"
+        #     "Важно: укажите комментарий <b>точно</b>, иначе платёж не будет найден автоматически.",
+        #     disable_web_page_preview=True
+        # )
+
+    @router.callback_query(F.data == BTN_PAY_TON)
+    async def pay_ton(cb: types.CallbackQuery, state: FSMContext):
         data = await state.get_data()
+        qty = data.get("qty")
         recipient = data.get("recipient")
-
         wallet = os.getenv("TON_WALLET")
-        if not wallet:
-            await m.answer("Кошелёк TON не настроен. Обратитесь в поддержку.")
+        if not qty or not wallet:
+            await cb.message.answer("TON кошелёк не настроен или нет количества. Попробуйте ещё раз.")
             await state.clear()
             return
 
         async with session_maker() as session:
             users = UsersRepo(session)
             orders = OrdersRepo(session)
-            user = await users.upsert_from_telegram(m.from_user)
+            user = await users.upsert_from_telegram(cb.from_user)
 
-            # цена 1 звезды в TON
-            price_per_star_ton = await get_star_price_in_ton(session)  # Decimal
-            total_ton = calc_ton_for_stars(qty, price_per_star_ton)    # Decimal
+            price_per_star_ton = await get_star_price_in_ton(session)
+            total_ton = calc_ton_for_stars(qty, price_per_star_ton)
 
             memo_prefix = os.getenv("TON_MEMO_PREFIX", "INV-")
-            memo = f"{memo_prefix}{m.from_user.id}-{m.message_id}"
+            memo = f"{memo_prefix}{cb.from_user.id}-{cb.message.message_id}"
 
-            # создаём заказ pending
-            # order = await orders.create_pending_ton_order(
-            #     user_id=user.id,
-            #     username=user.username,
-            #     stars_qty=qty,
-            #     recipient=recipient,
-            #     amount_ton=float(total_ton),
-            #     memo=memo,
-            #     wallet=wallet,
-            # )
             order = await orders.create_pending_ton_order(
                 user_id=user.id,
                 username=user.username,
@@ -117,14 +175,12 @@ def get_router(session_maker: async_sessionmaker) -> Router:
             )
 
         await state.clear()
-        await m.answer(
-            f"Заказ №{order.id}: {qty} ⭐\n"
-            "🔐 Платёж (TON)\n"
+        await cb.message.edit_text(
+            f"Заказ №{order.id}: {qty} ⭐"
+            "💎 Платёж (TON)\n"
             f"➤ Адрес: <code>{wallet}</code>\n"
-            f"➤ Сумма: <code>{total_ton}</code> TON\n"
-            f"➤ Комментарий (TAG/MEMO): <code>{memo}</code>\n\n"
-            "Важно: укажите комментарий <b>точно</b>, иначе платёж не будет найден автоматически.",
-            disable_web_page_preview=True
+            f"➤ Сумма: <b>{total_ton}</b> TON\n"
+            f"➤ Комментарий (TAG/MEMO): <code>{memo}</code>\n\n"   
         )
 
         # Фоновая проверка платежа — без блокировки обработчика
@@ -141,4 +197,66 @@ def get_router(session_maker: async_sessionmaker) -> Router:
 
         asyncio.create_task(_check())
 
+    @router.callback_query(F.data == BTN_PAY_SBP)
+    async def pay_sbp(cb: types.CallbackQuery, state: FSMContext):
+        data = await state.get_data()
+        qty = data.get("qty")
+        recipient = data.get("recipient")
+        if not qty:
+            await cb.message.answer("Не вижу количество. Начните заново: «⭐ Купить звёзды».")
+            await state.clear()
+            return
+
+        async with session_maker() as session:
+            users = UsersRepo(session)
+            orders = OrdersRepo(session)
+            user = await users.upsert_from_telegram(cb.from_user)
+
+            # RUB-цена
+            price_per_star_rub = await get_star_price_in_rub(session)
+            amount_rub = calc_rub_for_stars(qty, price_per_star_rub)
+
+        # создаём счёт в Platega
+        payload = f"user:{cb.from_user.id}|stars:{qty}"
+        tx_id, redirect = await create_sbp_invoice(
+            amount_rub=amount_rub,
+            description=f"Покупка {qty}⭐",
+            payload=payload
+        )
+
+        # пишем заказ в БД (pending)
+        async with session_maker() as session:
+            orders = OrdersRepo(session)
+            order = await orders.create_pending_sbp_order(
+                user_id=user.id,
+                username=user.username,
+                recipient=recipient,
+                type="stars",
+                amount=qty,
+                price=float(amount_rub),
+                transaction_id=tx_id,
+                redirect_url=redirect
+            )
+
+        await state.clear()
+        await cb.message.edit_text(
+            f"Заказ №{order.id}: {qty} ⭐ на {amount_rub} RUB\n"
+            "🏦 СБП — платёж создан.\n"
+            f"Ссылка на оплату: {redirect}\n\n"
+            "Откройте ссылку, отсканируйте QR и оплатите в течение 15 минут."
+        )
+
+        async def _poll():
+            status_tx = await wait_payment_confirmed(tx_id)
+            if status_tx:
+                async with session_maker() as session:
+                    orders = OrdersRepo(session)
+                    await orders.mark_paid(order.id, tx_hash=status_tx, income=None)
+                await cb.message.answer(f"✅ Оплата по заказу №{order.id} получена!")
+                # TODO: тут начислим звёзды/подарок
+            else:
+                await cb.message.answer(f"⏳ Заказ №{order.id}: время ожидания истекло или платёж отменён.")
+
+        asyncio.create_task(_poll())
+        
     return router
