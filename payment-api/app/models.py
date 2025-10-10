@@ -24,7 +24,6 @@ class RequiredChannel(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     channel_username: Mapped[str] = mapped_column(Text(), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    bot_key: Mapped[int] = mapped_column(ForeignKey("user_bots"), nullable=False)
     created_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=False))
 
 class Order(Base):
@@ -68,16 +67,6 @@ class PricingRule(Base):
 class Referral(Base):
     __tablename__ = "referrals"
     id: Mapped[int] = mapped_column(primary_key=True)
-    referrer_id: Mapped[int | None] = mapped_column(BigInteger)
-    referee: Mapped[int | None] = mapped_column(BigInteger)
+    refferer_id: Mapped[int | None] = mapped_column(BigInteger)
+    refferee: Mapped[int | None] = mapped_column(BigInteger)
     created_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=False))
-
-
-class UserBot(Base):
-    __tablename__ = "user_bots"
-    id: Mapped[int] = mapped_column(primary_key=True)
-    owner_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
-    tg_bot_token: Mapped[str | None] = mapped_column(String())
-    bot_username: Mapped[str | None] = mapped_column(String())
-    tg_bot_id: Mapped[int | None] = mapped_column(BigInteger)
-    is_active: Mapped[bool | None] = mapped_column(Boolean, default=True)

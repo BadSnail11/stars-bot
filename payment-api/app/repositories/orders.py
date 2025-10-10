@@ -53,6 +53,22 @@ class OrdersRepo:
         await self.session.commit()
         return order
     
+    async def create_pending_other_crypto_order(
+        self, user_id: int, username: str | None, recipient: str | None, type: str, amount: float, price: float
+    ) -> Order:
+        payload = {"provider": "heleket", "type": type, "amount": amount, "recipient": recipient}
+        res = await self.session.execute(
+            insert(Order).values(
+                user_id=user_id, username=username, recipient=recipient,
+                type=type, amount=amount, price=price,
+                income=None, currency="RUB", status="pending",
+                message=None, gateway_payload=payload, created_at=func.now(),
+            ).returning(Order)
+        )
+        order = res.scalar_one()
+        await self.session.commit()
+        return order
+    
     async def mark_paid(self, order_id: int, tx_hash: str, income: float | None = None):
         # безопасно мёржим {"tx_hash": "<...>"} в gateway_payload
         new_kv = cast({"tx_hash": tx_hash}, JSONB)
@@ -95,4 +111,13 @@ class OrdersRepo:
         )
         res = await self.session.execute(q)
         return int(res.scalar_one())
+    
+    async def update_gateway_payload(self, order_id: int, patch: dict):
+        # payload := coalesce(payload, {}) || :patch
+        from ..models import Order
+        merged = func.coalesce(Order.gateway_payload, cast({}, JSONB)).op("||")(cast(patch, JSONB))
+        await self.session.execute(
+            update(Order).where(Order.id == order_id).values(gateway_payload=merged)
+        )
+        await self.session.commit()
 

@@ -52,3 +52,14 @@ def premium_duration_kb(m3_cb: str, m6_cb: str, m12_cb: str, cancel_cb: str):
     kb.button(text="12 мес", callback_data=m12_cb)
     kb.button(text="Отмена", callback_data=cancel_cb)
     return kb.as_markup()
+
+
+def history_nav_kb(page: int, has_prev: bool, has_next: bool):
+    kb = InlineKeyboardBuilder()
+    if has_prev:
+        kb.button(text="⬅️ Назад", callback_data=f"hist:{page-1}")
+    kb.button(text=f"Стр. {page}", callback_data="hist:stay")
+    if has_next:
+        kb.button(text="Вперёд ➡️", callback_data=f"hist:{page+1}")
+    return kb.as_markup()
+

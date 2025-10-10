@@ -1,0 +1,281 @@
+from fastapi import APIRouter, HTTPException
+from ..schemas import CreateOrderRequest, CreateOrderResponse, OrderStatusResponse
+from ..db import SessionLocal
+from ..repositories.users import UsersRepo
+from ..repositories.orders import OrdersRepo
+from ..repositories.pricing import PricingRepo
+from ..services.pricing import (
+    get_star_price_in_ton, calc_ton_for_stars,
+    get_star_price_in_rub, calc_rub_for_stars,
+    get_premium_price_in_ton, calc_ton_for_premium,
+    get_premium_price_in_rub, calc_rub_for_premium,
+)
+from ..services.ton import wait_ton_payment
+from ..services.platega import create_sbp_invoice, wait_payment_confirmed
+from ..services.fulfillment import fulfill_order
+from ..services.referral_accrual import accrue_referral_reward
+from ..services import heleket as hk
+import os, asyncio
+from decimal import Decimal
+
+router = APIRouter(prefix="/orders", tags=["orders"])
+
+@router.post("", response_model=CreateOrderResponse)
+async def create_order(payload: CreateOrderRequest):
+    async with SessionLocal() as session:
+        users = UsersRepo(session)
+        orders = OrdersRepo(session)
+
+        user = await users.upsert_from_tg_payload(payload.user_tg_id, payload.username)
+
+        # ветвим по типу и способу оплаты
+        if payload.order_type == "stars":
+            qty = int(payload.amount)
+            if qty < 50:
+                raise HTTPException(400, "Минимум 50 звёзд")
+            if payload.payment_method == "TON":
+                price_per_star_ton = await get_star_price_in_ton(session)
+                total_ton = calc_ton_for_stars(qty, price_per_star_ton)
+                wallet = os.getenv("TON_WALLET")
+                if not wallet:
+                    raise HTTPException(500, "TON_WALLET not configured")
+                memo = f"{os.getenv('TON_MEMO_PREFIX','INV-')}{payload.user_tg_id}"
+                order = await orders.create_pending_ton_order(
+                    user_id=user.id,
+                    username=user.username,
+                    recipient=payload.recipient,
+                    type=payload.order_type,
+                    amount=qty,
+                    price=float(total_ton),
+                    memo=memo,
+                    wallet=wallet
+                )
+                # запустим фоновую проверку TON
+                asyncio.create_task(_background_ton_check(order.id, wallet, memo, total_ton))
+                return CreateOrderResponse(
+                    order_id=order.id, status=order.status,
+                    ton={"address": wallet, "memo": memo, "amount_ton": str(total_ton)}
+                )
+
+            elif payload.payment_method == "SBP":
+                price_per_star_rub = await get_star_price_in_rub(session)
+                amount_rub = calc_rub_for_stars(qty, price_per_star_rub)
+                tx_id, redirect = await create_sbp_invoice(
+                    amount_rub=amount_rub,
+                    description=f"Покупка {qty}⭐",
+                    payload=f"user:{payload.user_tg_id}|stars:{qty}"
+                )
+                order = await orders.create_pending_sbp_order(
+                    user_id=user.id,
+                    username=user.username,
+                    recipient=payload.recipient,
+                    type=payload.order_type,
+                    amount=qty,
+                    price=amount_rub,
+                    transaction_id=tx_id,
+                    redirect_url=redirect
+                )
+                # фоновый пуллинг статуса
+                asyncio.create_task(_background_sbp_check(order.id, tx_id))
+                return CreateOrderResponse(
+                    order_id=order.id, status=order.status,
+                    sbp={"redirect_url": redirect, "transaction_id": tx_id, "amount_rub": amount_rub}
+                )
+            elif payload.payment_method == "CRYPTO_OTHER":
+                # RUB-прайс → передаём в Heleket, он сконвертит в USDT TRC20
+                price_per_star_rub = await get_star_price_in_rub(session)
+                amount_rub = calc_rub_for_stars(qty, price_per_star_rub)
+
+                # создаём pending-заказ в нашей БД
+                order = await orders.create_pending_other_crypto_order(
+                    user_id=user.id,
+                    username=user.username,
+                    recipient=payload.recipient,
+                    type=payload.order_type,
+                    amount=qty,
+                    price=amount_rub
+                )
+
+                inv = await hk.create_invoice(
+                    amount=f"{amount_rub:.2f}",
+                    currency="RUB",
+                    order_id=str(order.id),   # важно: уникальный
+                    to_currency="USDT",
+                    # network=os.getenv("HELEKET_PAYER_NETWORK","tron"),
+                    # url_return=os.getenv("HELEKET_RETURN_URL"),
+                    # url_success=os.getenv("HELEKET_SUCCESS_URL"),
+                    url_callback=os.getenv("HELEKET_CALLBACK_URL"),
+                    lifetime=int(os.getenv("HELEKET_INVOICE_LIFETIME","1800")),
+                )
+
+                # сохраним полезное в gateway_payload
+                await orders.update_gateway_payload(order.id, {
+                    "provider": "heleket",
+                    "heleket": {
+                        "uuid": inv.get("result", {}).get("uuid"),
+                        "url": inv.get("result", {}).get("url"),
+                        "address": inv.get("result", {}).get("address"),
+                        "payer_currency": inv.get("result", {}).get("payer_currency"),
+                        "network": inv.get("result", {}).get("network"),
+                    }
+                })
+
+                # запустим фоновый пуллинг статуса (если не пользуешься вебхуком)
+                asyncio.create_task(_background_heleket_check(order.id))
+
+                return CreateOrderResponse(
+                    order_id=order.id,
+                    status=order.status,
+                    message="Оплатите по ссылке Heleket",
+                )
+
+            else:
+                raise HTTPException(400, "Способ оплаты не поддержан (other)")
+
+        elif payload.order_type == "premium":
+            months = int(payload.amount)
+            if months not in (3,6,12):
+                raise HTTPException(400, "Premium: допускаются только 3/6/12 мес.")
+            if payload.payment_method == "TON":
+                price_per_month_ton = await get_premium_price_in_ton(session)
+                total_ton = calc_ton_for_premium(months, price_per_month_ton)
+                wallet = os.getenv("TON_WALLET")
+                if not wallet:
+                    raise HTTPException(500, "TON_WALLET not configured")
+                memo = f"{os.getenv('TON_MEMO_PREFIX','INV-')}P-{payload.user_tg_id}"
+                order = await orders.create_pending_ton_order(
+                    user_id=user.id,
+                    username=user.username,
+                    recipient=payload.recipient,
+                    type=payload.payment_method,
+                    amount=months,
+                    price=float(total_ton),
+                    memo=memo,
+                    wallet=wallet
+                )
+                asyncio.create_task(_background_ton_check(order.id, wallet, memo, total_ton))
+                return CreateOrderResponse(
+                    order_id=order.id, status=order.status,
+                    ton={"address": wallet, "memo": memo, "amount_ton": str(total_ton)}
+                )
+
+            elif payload.payment_method == "SBP":
+                price_per_month_rub = await get_premium_price_in_rub(session)
+                amount_rub = calc_rub_for_premium(months, price_per_month_rub)
+                tx_id, redirect = await create_sbp_invoice(
+                    amount_rub=amount_rub,
+                    description=f"Telegram Premium {months} мес.",
+                    payload=f"user:{payload.user_tg_id}|premium:{months}"
+                )
+                order = await orders.create_pending_sbp_order(
+                    user_id=user.id,
+                    username=user.username,
+                    recipient=payload.recipient,
+                    type=payload.order_type,
+                    amount=float(months),
+                    price=amount_rub,
+                    transaction_id=tx_id,
+                    redirect_url=redirect
+                )
+                asyncio.create_task(_background_sbp_check(order.id, tx_id))
+                return CreateOrderResponse(
+                    order_id=order.id, status=order.status,
+                    sbp={"redirect_url": redirect, "transaction_id": tx_id, "amount_rub": amount_rub}
+                )
+            elif payload.payment_method == "HELEKET":
+                price_per_month_rub = await get_premium_price_in_rub(session)
+                amount_rub = calc_rub_for_premium(months, price_per_month_rub)
+
+                order = await orders.create_pending_other_crypto_order(
+                    user_id=user.id, username=user.username,
+                    months=months, recipient=payload.recipient,
+                    amount=amount_rub, currency="RUB",
+                    provider="heleket", type="premium"
+                )
+
+                inv = await hk.create_invoice(
+                    amount=f"{amount_rub:.2f}",
+                    currency="RUB",
+                    order_id=str(order.id),
+                    to_currency="USDT",
+                    # network=os.getenv("HELEKET_PAYER_NETWORK","tron"),
+                    # url_return=os.getenv("HELEKET_RETURN_URL"),
+                    # url_success=os.getenv("HELEKET_SUCCESS_URL"),
+                    url_callback=os.getenv("HELEKET_CALLBACK_URL"),
+                    lifetime=int(os.getenv("HELEKET_INVOICE_LIFETIME","1800")),
+                )
+
+                await orders.update_gateway_payload(order.id, {
+                    "provider": "heleket",
+                    "heleket": {
+                        "uuid": inv.get("result", {}).get("uuid"),
+                        "url": inv.get("result", {}).get("url"),
+                        "address": inv.get("result", {}).get("address"),
+                        "payer_currency": inv.get("result", {}).get("payer_currency"),
+                        "network": inv.get("result", {}).get("network"),
+                    }
+                })
+
+                asyncio.create_task(_background_heleket_check(order.id))
+
+                return CreateOrderResponse(
+                    order_id=order.id,
+                    status=order.status,
+                    message="Оплатите по ссылке Heleket",
+                )
+
+            else:
+                raise HTTPException(400, "Способ оплаты не поддержан (other)")
+        else:
+            raise HTTPException(400, "Unknown order_type")
+        
+        
+
+
+@router.get("/{order_id}", response_model=OrderStatusResponse)
+async def get_order_status(order_id: int):
+    async with SessionLocal() as session:
+        orders = OrdersRepo(session)
+        order = await orders.get_by_id(order_id)
+        if not order:
+            raise HTTPException(404, "Order not found")
+        return OrderStatusResponse(order_id=order.id, status=order.status, message=order.message or None)
+
+
+# ==== фоновые операции ====
+
+async def _on_paid(order_id: int, tx_hash: str | None):
+    async with SessionLocal() as session:
+        orders = OrdersRepo(session)
+        order = await orders.get_by_id(order_id)
+        if not order or order.status == "paid":
+            return
+        await orders.mark_paid(order_id, tx_hash or "n/a", income=None)
+
+        # Рефералка
+        fresh = await orders.get_by_id(order_id)
+        from ..services.referral_accrual import accrue_referral_reward
+        await accrue_referral_reward(session, fresh)
+
+        # Фулфилмент через Fragment
+        from ..services.fulfillment import fulfill_order
+        ok, msg = await fulfill_order(session, fresh)
+
+async def _background_ton_check(order_id: int, wallet: str, memo: str, total_ton: Decimal):
+    from ..services.ton import wait_ton_payment
+    tx_hash = await wait_ton_payment(wallet, memo, total_ton)
+    if tx_hash:
+        await _on_paid(order_id, tx_hash)
+
+async def _background_sbp_check(order_id: int, tx_id: str):
+    from ..services.platega import wait_payment_confirmed
+    status_tx = await wait_payment_confirmed(tx_id)
+    if status_tx:
+        await _on_paid(order_id, status_tx)
+
+
+async def _background_heleket_check(order_id: int):
+    from ..services.heleket import wait_invoice_paid
+    res = await wait_invoice_paid(order_id=str(order_id))
+    if res:
+        await _on_paid(order_id, res.get("txid"))

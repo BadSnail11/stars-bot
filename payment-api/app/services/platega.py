@@ -21,6 +21,7 @@ async def create_sbp_invoice(amount_rub: int, description: str, payload: str) ->
     """
     Возвращает (transaction_id, redirect_url)
     """
+    print(MID, SEC)
     tx_id = str(uuid.uuid4())
     body = {
         "paymentMethod": METHOD_SBP,  # 2 - СБП/QR

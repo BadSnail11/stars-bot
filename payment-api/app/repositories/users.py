@@ -1,6 +1,7 @@
 from typing import Optional
 from sqlalchemy import select, update, text, func
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from ..models import User
 
 class UsersRepo:
@@ -52,3 +53,16 @@ class UsersRepo:
             .values(balance=User.balance + delta)
         )
         await self.session.commit()
+
+    async def upsert_from_tg_payload(self, tg_user_id: int, username: str | None) -> User:
+        stmt = pg_insert(User).values(
+            tg_user_id=tg_user_id,
+            username=username,
+        ).on_conflict_do_update(
+            index_elements=[User.tg_user_id],
+            set_={"username": username}
+        ).returning(User)
+        res = await self.session.execute(stmt)
+        user = res.scalar_one()
+        await self.session.commit()
+        return user

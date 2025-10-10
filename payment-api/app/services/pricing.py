@@ -1,4 +1,4 @@
-from decimal import Decimal, ROUND_UP
+from decimal import Decimal, ROUND_UP, ROUND_HALF_UP
 from sqlalchemy.ext.asyncio import AsyncSession
 from ..repositories.pricing import PricingRepo
 
@@ -47,3 +47,34 @@ def calc_rub_for_premium(months: int, price_per_month_rub: Decimal) -> int:
 def calc_ton_for_premium(months: int, price_per_month_ton: Decimal) -> Decimal:
     total = price_per_month_ton * Decimal(months)
     return total.quantize(Decimal("0.000000001"), rounding=ROUND_UP)
+
+async def convert_amount_to_ton(session: AsyncSession, amount: Decimal, currency: str) -> Decimal:
+    """
+    amount в currency -> TON (через ручную цену TON в этой валюте).
+    Пока реализовано для RUB и TON.
+    """
+    cur = (currency or "").upper()
+    if cur == "TON":
+        return amount.quantize(Decimal("0.000001"))  # до 6 знаков для баланса
+    elif cur == "RUB":
+        ton_price_rub = await get_ton_price_in_rub(session)  # RUB за 1 TON
+        if ton_price_rub <= 0:
+            raise RuntimeError("Некорректная цена TON (<=0)")
+        ton = (amount / ton_price_rub).quantize(Decimal("0.000001"), rounding=ROUND_HALF_UP)
+        return ton
+    else:
+        # можно позже расширить на USDT и т.д.
+        raise RuntimeError(f"Конвертация из {cur} в TON не настроена")
+    
+
+async def get_ton_price_in_rub(session: AsyncSession) -> Decimal:
+    """
+    Возвращает цену 1 TON в RUB из pricing_rules (manual).
+    item_type='ton', currency='RUB'
+    """
+    repo = PricingRepo(session)
+    rule = await repo.get_active_manual(item_type="ton", currency="RUB")
+    if not rule or rule.manual_price is None:
+        raise RuntimeError("Не задана цена TON в RUB (pricing_rules)")
+    return Decimal(str(rule.manual_price))
+

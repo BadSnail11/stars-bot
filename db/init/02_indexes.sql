@@ -18,3 +18,12 @@ CREATE INDEX IF NOT EXISTS idx_broadcasts_created_at ON broadcasts (created_at);
 
 -- pricing_rules
 CREATE INDEX IF NOT EXISTS idx_pricing_rules_active ON pricing_rules (item_type, is_active);
+
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_referrals_pair ON referrals(referrer_id, referee_id);
+CREATE INDEX IF NOT EXISTS idx_referrals_referrer ON referrals(referrer_id);
+
+CREATE INDEX IF NOT EXISTS idx_user_bots_active ON user_bots(is_active);
+
+
+CREATE INDEX IF NOT EXISTS idx_required_channels_bot_key ON required_channels(bot_key);
