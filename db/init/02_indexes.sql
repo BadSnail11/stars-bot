@@ -27,3 +27,5 @@ CREATE INDEX IF NOT EXISTS idx_user_bots_active ON user_bots(is_active);
 
 
 CREATE INDEX IF NOT EXISTS idx_required_channels_bot_key ON required_channels(bot_key);
+
+CREATE INDEX IF NOT EXISTS idx_pricing_rules_user_bot_id ON pricing_rules(bot_id);

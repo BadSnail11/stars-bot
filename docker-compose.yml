@@ -33,5 +33,15 @@ services:
     ports:
       - "${PGADMIN_PORT:-8080}:80"
 
+  user-bot:
+    container_name: user-bot
+    build: ./user-bot
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - ./user-bot/.env
+
 volumes:
   pgdata:

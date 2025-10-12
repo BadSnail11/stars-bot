@@ -9,6 +9,8 @@ from ..repositories.users import UsersRepo
 from ..repositories.user_bots import UserBotsRepo
 from ..services.polling_manager import PollingManager
 
+from ..keyboards.common import back_nav_kb
+
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 
@@ -21,8 +23,9 @@ class MirrorStates(StatesGroup):
 def get_router(session_maker: async_sessionmaker) -> Router:
     router = Router(name="mirror")
 
-    @router.message(F.text == "🤖 Создать свой бот")
-    async def ask_token(m: types.Message, state: FSMContext):
+    @router.callback_query(F.data == "create_bot")
+    async def ask_token(cb: types.CallbackQuery, state: FSMContext):
+        m = cb.message
         async with session_maker() as session:
             users = UsersRepo(session)
             me = await users.upsert_from_telegram(m.from_user)
@@ -39,10 +42,10 @@ def get_router(session_maker: async_sessionmaker) -> Router:
                 return
 
         await state.set_state(MirrorStates.waiting_token)
-        await m.answer(
+        await m.edit_text(
             "Пришлите токен вашего бота (BotFather). "
             "Формат вроде <code>1234567890:AA...ZZ</code>.\n"
-            "⚠️ Не публикуйте его в открытых чатах.",
+            "⚠️ Не публикуйте его в открытых чатах.", reply_markup=back_nav_kb()
         )
 
     @router.message(MirrorStates.waiting_token)

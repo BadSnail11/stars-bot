@@ -15,15 +15,30 @@ def check_subs_kb(channels: list[str], check_cb: str):
     kb.button(text="Проверить подписку ✅", callback_data=check_cb)
     return kb.as_markup()
 
-def main_menu_kb() -> types.ReplyKeyboardMarkup:
-    kb = [
-        [types.KeyboardButton(text="⭐ Купить звёзды"), types.KeyboardButton(text="👑 Премиум")],
-        # [types.KeyboardButton(text="👑 Премиум")],
-        [types.KeyboardButton(text="🧾 История заказов"), types.KeyboardButton(text="🆘 Поддержка")],
-        [types.KeyboardButton(text="👥 Реферальная программа"), types.KeyboardButton(text="🤖 Создать свой бот")],
-        [types.KeyboardButton(text="📄 Оферта")],
-    ]
-    return types.ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True)
+# def main_menu_kb() -> types.ReplyKeyboardMarkup:
+#     kb = [
+#         [types.KeyboardButton(text="⭐ Купить звёзды"), types.KeyboardButton(text="👑 Премиум")],
+#         # [types.KeyboardButton(text="👑 Премиум")],
+#         [types.KeyboardButton(text="🧾 История заказов"), types.KeyboardButton(text="🆘 Поддержка")],
+#         [types.KeyboardButton(text="👥 Реферальная программа"), types.KeyboardButton(text="🤖 Создать свой бот")],
+#         [types.KeyboardButton(text="📄 Оферта")],
+#     ]
+#     return types.ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True)
+
+def main_menu_kb() -> types.InlineKeyboardMarkup:
+    # kb = [
+    #     [types.KeyboardButton(text="⭐ Купить звёзды"), types.KeyboardButton(text="👑 Премиум")],
+    #     [types.KeyboardButton(text="🧾 История заказов"), types.KeyboardButton(text="🆘 Поддержка")],
+    #     [types.KeyboardButton(text="👥 Реферальная программа"), types.KeyboardButton(text="🤖 Создать свой бот")],
+    #     [types.KeyboardButton(text="📄 Оферта")],
+    # ]
+    kb = InlineKeyboardBuilder()
+    kb.row(*[types.InlineKeyboardButton(text="⭐ Купить звёзды", callback_data="stars"), types.InlineKeyboardButton(text="👑 Премиум", callback_data="premium")])
+    kb.row(*[types.InlineKeyboardButton(text="🧾 История заказов", callback_data="history"), types.InlineKeyboardButton(text="🆘 Поддержка", callback_data="support")])
+    kb.row(*[types.InlineKeyboardButton(text="👥 Реферальная программа", callback_data="referal"), types.InlineKeyboardButton(text="🤖 Создать свой бот", callback_data="create_bot")])
+    kb.row(*[types.InlineKeyboardButton(text="📄 Оферта", callback_data="offer")])
+    # return types.ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True)
+    return kb.as_markup()
 
 def who_kb(self_cb: str, gift_cb: str, cancel_cb: str):
     kb = InlineKeyboardBuilder()
@@ -61,5 +76,10 @@ def history_nav_kb(page: int, has_prev: bool, has_next: bool):
     kb.button(text=f"Стр. {page}", callback_data="hist:stay")
     if has_next:
         kb.button(text="Вперёд ➡️", callback_data=f"hist:{page+1}")
+    return kb.as_markup()
+
+def back_nav_kb():
+    kb = InlineKeyboardBuilder()
+    kb.button(text="⬅️ Назад", callback_data=f"nav_back")
     return kb.as_markup()
 

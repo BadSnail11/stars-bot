@@ -4,8 +4,8 @@ import os
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
-from redis.asyncio import Redis
-from aiogram.fsm.storage.redis import RedisStorage
+# from redis.asyncio import Redis
+# from aiogram.fsm.storage.redis import RedisStorage
 from aiogram.fsm.storage.base import DefaultKeyBuilder
 
 from src.services.mirror_manager import MirrorManager

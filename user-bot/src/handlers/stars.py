@@ -32,18 +32,18 @@ def get_router(session_maker: async_sessionmaker) -> Router:
     router = Router(name="stars")
 
     # Точка входа — пункт меню "⭐ Купить звёзды"
-    @router.message(F.text == ("⭐ Купить звёзды"))
-    async def entry(m: types.Message, state: FSMContext):
+    @router.callback_query(F.data == "stars")
+    async def entry(cb: types.CallbackQuery, state: FSMContext):
         await state.clear()
         await state.set_state(BuyStars.choose_target)
-        await m.answer("Кому покупаем звёзды?", reply_markup=who_kb(BTN_SELF, BTN_GIFT, BTN_CANCEL))
+        await cb.message.edit_text("Кому покупаем звёзды?", reply_markup=who_kb(BTN_SELF, BTN_GIFT, BTN_CANCEL))
 
     # Отмена
     @router.callback_query(F.data == BTN_CANCEL)
     async def cancel(cb: types.CallbackQuery, state: FSMContext):
         await state.clear()
-        await cb.message.edit_text("Отменено. Возвращаемся в меню.")
-        await cb.message.answer("Главное меню:", reply_markup=main_menu_kb())
+        # await cb.message.edit_text("Отменено. Возвращаемся в меню.")
+        await cb.message.edit_text("Главное меню:", reply_markup=main_menu_kb())
 
     # Себе
     @router.callback_query(F.data == BTN_SELF)

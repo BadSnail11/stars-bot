@@ -10,8 +10,9 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 def get_router(session_maker: async_sessionmaker) -> Router:
     router = Router(name="referral")
 
-    @router.message(F.text == "👥 Реферальная программа")
-    async def show_ref_link(m: types.Message):
+    @router.callback_query(F.data == "referal")
+    async def show_ref_link(cb: types.CallbackQuery):
+        m = cb.message
         me = await m.bot.get_me()
         link = build_ref_link(me.username or "", m.from_user.id)
 
@@ -25,7 +26,7 @@ def get_router(session_maker: async_sessionmaker) -> Router:
             "Приглашайте друзей по вашей ссылке и получайте процент с их оплат.\n\n"
             f"Ваша ссылка:\n<code>{link}</code>"
         )
-        await m.answer(text, reply_markup=markup)
+        await m.edit_text(text, reply_markup=markup)
 
     # опционально: обработчик «назад в меню»
     @router.callback_query(lambda c: c.data == "back_to_menu")

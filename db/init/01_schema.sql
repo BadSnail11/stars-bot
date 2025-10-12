@@ -59,6 +59,7 @@ CREATE TABLE IF NOT EXISTS pricing_rules (
   manual_price DECIMAL(18,6),        -- для manual (RUB/USDT)
   currency VARCHAR(8),               -- 'RUB','USDT','TON'
   is_active BOOLEAN DEFAULT TRUE,
+  bot_id BIGINT UNIQUE REFERENCES user_bots(id) ON DELETE CASCADE;
   created_at TIMESTAMP DEFAULT NOW()
 );
 

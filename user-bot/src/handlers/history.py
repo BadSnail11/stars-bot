@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 from datetime import datetime
 from ..repositories.users import UsersRepo
 from ..repositories.orders import OrdersRepo
-from ..keyboards.common import history_nav_kb, main_menu_kb
+from ..keyboards.common import history_nav_kb, main_menu_kb, back_nav_kb
 
 PAGE_SIZE = 10
 
@@ -46,10 +46,7 @@ def get_router(session_maker: async_sessionmaker) -> Router:
 
         if total == 0:
             text = "Пока нет оплаченных заказов."
-            if edit:
-                await m.edit_text(text, reply_markup=main_menu_kb())
-            else:
-                await m.answer(text, reply_markup=main_menu_kb())
+            await m.edit_text(text, reply_markup=back_nav_kb())
             return
 
         lines = ["📦 <b>История заказов</b>", f"Всего: {total}", ""]
@@ -66,8 +63,9 @@ def get_router(session_maker: async_sessionmaker) -> Router:
             await m.answer(text, reply_markup=kb, disable_web_page_preview=True)
 
     # Вход из меню
-    @router.message(F.text == ("🧾 История заказов"))
-    async def history_entry(m: types.Message):
+    @router.callback_query(F.data == ("history"))
+    async def history_entry(cb: types.CallbackQuery):
+        m = cb.message
         await _render_page(m, m.from_user, page=1, edit=False)
 
     # Пагинация

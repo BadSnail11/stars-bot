@@ -35,17 +35,17 @@ BTN_PAY_OTHER = "pay_premium_other"
 def get_router(session_maker: async_sessionmaker) -> Router:
     router = Router(name="premium")
 
-    @router.message(F.text == ("👑 Премиум"))
-    async def entry(m: types.Message, state: FSMContext):
+    @router.callback_query(F.data == ("premium"))
+    async def entry(cb: types.CallbackQuery, state: FSMContext):
         await state.clear()
         await state.set_state(BuyPremium.choose_target)
-        await m.answer("Кому покупаем Telegram Premium?", reply_markup=who_kb(BTN_SELF, BTN_GIFT, BTN_CANCEL))
+        await cb.message.edit_text("Кому покупаем Telegram Premium?", reply_markup=who_kb(BTN_SELF, BTN_GIFT, BTN_CANCEL))
 
     @router.callback_query(F.data == BTN_CANCEL)
     async def cancel(cb: types.CallbackQuery, state: FSMContext):
         await state.clear()
-        await cb.message.edit_text("Отменено. Возвращаемся в меню.")
-        await cb.message.answer("Главное меню:", reply_markup=main_menu_kb())
+        # await cb.message.edit_text("Отменено. Возвращаемся в меню.")
+        await cb.message.edit_text("Главное меню:", reply_markup=main_menu_kb())
 
     @router.callback_query(F.data == BTN_SELF)
     async def choose_self(cb: types.CallbackQuery, state: FSMContext):
