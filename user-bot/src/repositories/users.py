@@ -20,7 +20,7 @@ class UsersRepo:
                 username=tg_user.username,
                 first_name=tg_user.first_name,
                 last_name=tg_user.last_name,
-                balance=0f,
+                balance=0,
                 lang_code=getattr(tg_user, "language_code", None),
             )
             self.session.add(user)
