@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS users (
   first_name TEXT,
   last_name TEXT,
   lang_code VARCHAR(8),
-  balance DECIMAL(18,6) NOT NULL DEFAULT 0;
+  balance DECIMAL(18,6) NOT NULL DEFAULT 0,
   accepted_offer_at TIMESTAMP,               -- когда подтвердил оферту
   is_blocked BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP DEFAULT NOW()
@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS required_channels (
   id BIGSERIAL PRIMARY KEY,
   channel_username TEXT NOT NULL,    -- @channel
   is_active BOOLEAN DEFAULT TRUE,
-  bot_key BIGINT REFERENCES user_bots(id) ON DELETE CASCADE;
+  bot_key BIGINT REFERENCES user_bots(id) ON DELETE CASCADE,
   created_at TIMESTAMP DEFAULT NOW()
 );
 
@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS pricing_rules (
   manual_price DECIMAL(18,6),        -- для manual (RUB/USDT)
   currency VARCHAR(8),               -- 'RUB','USDT','TON'
   is_active BOOLEAN DEFAULT TRUE,
-  bot_id BIGINT UNIQUE REFERENCES user_bots(id) ON DELETE CASCADE;
+  bot_id BIGINT UNIQUE REFERENCES user_bots(id) ON DELETE CASCADE,
   created_at TIMESTAMP DEFAULT NOW()
 );
 
@@ -74,7 +74,7 @@ CREATE TABLE IF NOT EXISTS user_bots (
   id BIGSERIAL PRIMARY KEY,
   owner_user_id BIGINT NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
   tg_bot_token TEXT NOT NULL,
-  tg_bot_id BIGINT UNIQUE;
+  tg_bot_id BIGINT UNIQUE,
   bot_username TEXT,
   is_active BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMP DEFAULT NOW()
