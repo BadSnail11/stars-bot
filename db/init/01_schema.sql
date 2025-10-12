@@ -12,6 +12,16 @@ CREATE TABLE IF NOT EXISTS users (
   created_at TIMESTAMP DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS user_bots (
+  id BIGSERIAL PRIMARY KEY,
+  owner_user_id BIGINT NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+  tg_bot_token TEXT NOT NULL,
+  tg_bot_id BIGINT UNIQUE,
+  bot_username TEXT,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
 -- обязательные каналы для подписки
 CREATE TABLE IF NOT EXISTS required_channels (
   id BIGSERIAL PRIMARY KEY,
@@ -70,12 +80,4 @@ CREATE TABLE IF NOT EXISTS referrals (
   created_at  TIMESTAMP DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS user_bots (
-  id BIGSERIAL PRIMARY KEY,
-  owner_user_id BIGINT NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
-  tg_bot_token TEXT NOT NULL,
-  tg_bot_id BIGINT UNIQUE,
-  bot_username TEXT,
-  is_active BOOLEAN DEFAULT TRUE,
-  created_at TIMESTAMP DEFAULT NOW()
-);
+
