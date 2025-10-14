@@ -63,6 +63,8 @@ async def get_prices():
     # field = _recipient_field()
     payload = {"username": "string", "months": 3, "show_sender": False}
     premium_data = await _post_check_json(url, payload)
+    print(stars_data)
+    print(premium_data)
     stars_price = float(stars_data["errors"][0]["error"].split(", ")[-1].split(" ")[1]) / 50
     premium_price = float(premium_data["errors"][0]["error"].split(", ")[-1].split(" ")[1]) / 3
     return stars_price, premium_price
