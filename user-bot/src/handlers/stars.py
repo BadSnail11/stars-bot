@@ -121,7 +121,7 @@ def get_router(session_maker: async_sessionmaker) -> Router:
         address = ton.get("address")
         memo = ton.get("memo")
         amount_ton = ton.get("amount_ton")
-        link = f"ton://transfer/{address}?amount={int(amount_ton * 1000000000)}&text={memo}"
+        link = f"ton://transfer/{address}?amount={(amount_ton * 1000000000)}&text={memo}"
 
         await state.clear()
         await cb.message.edit_text(
