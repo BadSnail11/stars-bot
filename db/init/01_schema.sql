@@ -9,12 +9,13 @@ CREATE TABLE IF NOT EXISTS users (
   balance DECIMAL(18,6) NOT NULL DEFAULT 0,
   accepted_offer_at TIMESTAMP,               -- когда подтвердил оферту
   is_blocked BOOLEAN DEFAULT FALSE,
+  bot_id BIGINT NOT NULL REFERENCES user_bots(id);
   created_at TIMESTAMP DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS user_bots (
   id BIGSERIAL PRIMARY KEY,
-  owner_user_id BIGINT NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+  owner_user_id BIGINT UNIQUE REFERENCES users(id) ON DELETE CASCADE,
   tg_bot_token TEXT NOT NULL,
   tg_bot_id BIGINT UNIQUE,
   bot_username TEXT,
