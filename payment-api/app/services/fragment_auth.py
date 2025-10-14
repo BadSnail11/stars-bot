@@ -61,7 +61,7 @@ class FragmentAuth:
         if not _API_KEY or not _PHONE:
             raise RuntimeError("FRAGMENT_API_KEY или FRAGMENT_PHONE не заданы")
 
-        # print(_mnemonics())
+        print(_mnemonics())
         payload = {
             "api_key": _API_KEY,
             "phone_number": _PHONE,
