@@ -43,5 +43,15 @@ services:
     env_file:
       - ./user-bot/.env
 
+  admin-bot:
+    container_name: admin-bot
+    build: ./admin-bot
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - ./admin-bot/.env
+
 volumes:
   pgdata:
