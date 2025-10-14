@@ -9,7 +9,6 @@ CREATE TABLE IF NOT EXISTS users (
   balance DECIMAL(18,6) NOT NULL DEFAULT 0,
   accepted_offer_at TIMESTAMP,               -- когда подтвердил оферту
   is_blocked BOOLEAN DEFAULT FALSE,
-  bot_id BIGINT NOT NULL REFERENCES user_bots(id),
   created_at TIMESTAMP DEFAULT NOW()
 );
 
