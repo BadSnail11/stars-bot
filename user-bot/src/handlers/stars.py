@@ -8,7 +8,7 @@ import os, asyncio
 
 from ..repositories.users import UsersRepo
 from ..repositories.orders import OrdersRepo
-from ..keyboards.common import who_kb, cancel_kb, main_menu_kb, payment_methods_kb, payment_kb
+from ..keyboards.common import who_kb, cancel_kb, main_menu_kb, payment_methods_kb, payment_kb, back_nav_kb
 
 from ..services.payments_api import create_order
 from ..services.order_poll import poll_until_paid
@@ -50,7 +50,7 @@ def get_router(session_maker: async_sessionmaker) -> Router:
     async def choose_self(cb: types.CallbackQuery, state: FSMContext):
         await state.update_data(recipient=None)
         await state.set_state(BuyStars.enter_qty)
-        await cb.message.edit_text("Сколько звёзд купить? (минимум 50)")
+        await cb.message.edit_text("Сколько звёзд купить? (минимум 50)", reply_markup=back_nav_kb())
     
     # Подарок
     @router.callback_query(F.data == BTN_GIFT)
@@ -121,7 +121,7 @@ def get_router(session_maker: async_sessionmaker) -> Router:
         address = ton.get("address")
         memo = ton.get("memo")
         amount_ton = ton.get("amount_ton")
-        link = f"ton://transfer/{address}?amount={(amount_ton * 1000000000)}&text={memo}"
+        link = f"ton://transfer/{address}?amount={(amount_ton * 1000000)}000&text={memo}"
 
         await state.clear()
         await cb.message.edit_text(
