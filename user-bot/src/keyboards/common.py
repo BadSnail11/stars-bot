@@ -80,6 +80,12 @@ def history_nav_kb(page: int, has_prev: bool, has_next: bool):
 
 def back_nav_kb():
     kb = InlineKeyboardBuilder()
-    kb.button(text="⬅️ Назад", callback_data=f"nav_back")
+    kb.button(text="⬅️ В меню", callback_data=f"nav_back")
+    return kb.as_markup()
+
+def payment_kb(url: str):
+    kb = InlineKeyboardBuilder()
+    kb.button(text="Оплатить", url=url)
+    kb.button(text="⬅️ В меню", callback_data="nav_back")
     return kb.as_markup()
 

@@ -9,7 +9,7 @@ import os, asyncio
 
 from ..repositories.users import UsersRepo
 from ..repositories.orders import OrdersRepo
-from ..keyboards.common import who_kb, cancel_kb, main_menu_kb, payment_methods_kb, premium_duration_kb
+from ..keyboards.common import who_kb, cancel_kb, main_menu_kb, payment_methods_kb, premium_duration_kb, payment_kb
 
 from ..services.payments_api import create_order
 from ..services.order_poll import poll_until_paid
@@ -123,8 +123,9 @@ def get_router(session_maker: async_sessionmaker) -> Router:
         await cb.message.edit_text(
             "🏦 СБП — платёж создан.\n"
             f"Заказ №{order_id}: Premium {months} мес. на {sbp.get('amount_rub')} RUB\n"
-            f"Ссылка на оплату: {sbp.get('redirect_url')}\n\n"
-            "Оплатите в течение 15 минут."
+            # f"Ссылка на оплату: {}\n\n"
+            "Оплатите в течение 15 минут.",
+            reply_markup=payment_kb(sbp.get('redirect_url'))
         )
         await _start_polling(cb, order_id)
 
@@ -149,13 +150,15 @@ def get_router(session_maker: async_sessionmaker) -> Router:
         )
         order_id = resp["order_id"]
         ton = resp.get("ton", {})
+        link = f"ton://transfer/{address}?amount={int(amount_ton * 1000000000)}&text={memo}"
         await state.clear()
         await cb.message.edit_text(
+            f"Заказ №{order_id}: Premium {months} мес."
             "💎 Платёж (TON)\n"
             f"➤ Адрес: <code>{ton.get('address')}</code>\n"
             f"➤ Сумма: <b>{ton.get('amount_ton')}</b> TON\n"
-            f"➤ Комментарий: <code>{ton.get('memo')}</code>\n\n"
-            f"Заказ №{order_id}: Premium {months} мес."
+            f"➤ Комментарий: <code>{ton.get('memo')}</code>\n\n",
+            reply_markup=payment_kb(link)
         )
         await _start_polling(cb, order_id)
 
@@ -179,9 +182,10 @@ def get_router(session_maker: async_sessionmaker) -> Router:
             payment_method="CRYPTO_OTHER",
         )
         order_id = resp["order_id"]
+        url = resp["other"]["redirect_url"]
         msg = resp.get("message") or "Счёт Heleket создан. Перейдите по ссылке на странице оплаты."
         await state.clear()
-        await cb.message.edit_text(f"🪙 Heleket\nЗаказ №{order_id}: Premium {months} мес.\n{msg}")
+        await cb.message.edit_text(f"🪙 Heleket\nЗаказ №{order_id}: Premium {months} мес.\n{msg}", reply_markup=payment_kb(url))
         await _start_polling(cb, order_id)
 
     return router
