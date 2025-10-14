@@ -4,6 +4,7 @@ from ..db import SessionLocal
 from ..repositories.users import UsersRepo
 from ..repositories.orders import OrdersRepo
 from ..repositories.pricing import PricingRepo
+from ..repositories.user_bots import UserBotsRepo
 from ..services.pricing import (
     get_star_price_in_ton, calc_ton_for_stars,
     get_star_price_in_rub, calc_rub_for_stars,
@@ -18,6 +19,9 @@ from ..services import heleket as hk
 import os, asyncio
 from decimal import Decimal
 from ..services.fragment import buy_stars, buy_premium
+from ..services.heleket import wait_invoice_paid
+
+from ..services.fragment import get_prices
 
 
 router = APIRouter(prefix="/orders", tags=["orders"])
@@ -27,8 +31,13 @@ async def create_order(payload: CreateOrderRequest):
     async with SessionLocal() as session:
         users = UsersRepo(session)
         orders = OrdersRepo(session)
+        user_bots = UserBotsRepo(session)
 
         user = await users.get_by_tg_id(payload.user_tg_id)
+
+        bot_tg_id = payload.bot_tg_id
+        bot = await UserBotsRepo.get_by_tg_bot_id(user_bots, bot_tg_id)
+        bot_id = bot.id
 
         # ветвим по типу и способу оплаты
         if payload.order_type == "stars":
@@ -36,7 +45,7 @@ async def create_order(payload: CreateOrderRequest):
             if qty < 50:
                 raise HTTPException(400, "Минимум 50 звёзд")
             if payload.payment_method == "TON":
-                price_per_star_ton = await get_star_price_in_ton(session)
+                price_per_star_ton = await get_star_price_in_ton(session, bot_id)
                 total_ton = calc_ton_for_stars(qty, price_per_star_ton)
                 wallet = os.getenv("TON_WALLET")
                 if not wallet:
@@ -60,7 +69,7 @@ async def create_order(payload: CreateOrderRequest):
                 )
 
             elif payload.payment_method == "SBP":
-                price_per_star_rub = await get_star_price_in_rub(session)
+                price_per_star_rub = await get_star_price_in_rub(session, bot_id)
                 amount_rub = calc_rub_for_stars(qty, price_per_star_rub)
                 tx_id, redirect = await create_sbp_invoice(
                     amount_rub=amount_rub,
@@ -85,7 +94,7 @@ async def create_order(payload: CreateOrderRequest):
                 )
             elif payload.payment_method == "CRYPTO_OTHER":
                 # RUB-прайс → передаём в Heleket, он сконвертит в USDT TRC20
-                price_per_star_rub = await get_star_price_in_rub(session)
+                price_per_star_rub = await get_star_price_in_rub(session, bot_id)
                 amount_rub = calc_rub_for_stars(qty, price_per_star_rub)
 
                 # создаём pending-заказ в нашей БД
@@ -140,7 +149,7 @@ async def create_order(payload: CreateOrderRequest):
             if months not in (3,6,12):
                 raise HTTPException(400, "Premium: допускаются только 3/6/12 мес.")
             if payload.payment_method == "TON":
-                price_per_month_ton = await get_premium_price_in_ton(session)
+                price_per_month_ton = await get_premium_price_in_ton(session, bot_id)
                 total_ton = calc_ton_for_premium(months, price_per_month_ton)
                 wallet = os.getenv("TON_WALLET")
                 if not wallet:
@@ -163,7 +172,7 @@ async def create_order(payload: CreateOrderRequest):
                 )
 
             elif payload.payment_method == "SBP":
-                price_per_month_rub = await get_premium_price_in_rub(session)
+                price_per_month_rub = await get_premium_price_in_rub(session, bot_id)
                 amount_rub = calc_rub_for_premium(months, price_per_month_rub)
                 tx_id, redirect = await create_sbp_invoice(
                     amount_rub=amount_rub,
@@ -266,29 +275,19 @@ async def _on_paid(order_id: int, tx_hash: str | None):
         ok, msg = await fulfill_order(session, fresh)
 
 async def _background_ton_check(order_id: int, wallet: str, memo: str, total_ton: Decimal):
-    from ..services.ton import wait_ton_payment
     tx_hash = await wait_ton_payment(wallet, memo, total_ton)
     if tx_hash:
         await _on_paid(order_id, tx_hash)
 
 async def _background_sbp_check(order_id: int, tx_id: str):
-    from ..services.platega import wait_payment_confirmed
     status_tx = await wait_payment_confirmed(tx_id)
     if status_tx:
         await _on_paid(order_id, status_tx)
 
 
 async def _background_heleket_check(order_id: int):
-    from ..services.heleket import wait_invoice_paid
     res = await wait_invoice_paid(order_id=str(order_id), poll_interval=10)
     if res:
         await _on_paid(order_id, res.get("txid"))
 
-# async def _update_ton_price():
-#     stars_price = 0
-#     try:
-#         resp = await buy_stars(recipient="string", quantity=50)
-#         # pretty = json.dumps(resp, ensure_ascii=False, indent=2)
-#     except Exception as e:
-#         # Fragment API error 400: {'errors': [{'code': '0', 'error': "Not enough funds for wallet '0:50f4fdaaddd1acf8e8f9f3d1feed090875288cdcbceb613d4730c9780538298e' balance: '0.012356103 TON', transaction total: 0.339800000 TON"}]}
-#         stars_price = e["errors"][0]["transaction total"]
+

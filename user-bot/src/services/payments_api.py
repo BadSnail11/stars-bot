@@ -20,7 +20,8 @@ async def create_order(
     *, user_tg_id: int, username: Optional[str],
     recipient: Optional[str],
     order_type: OrderType, amount: int,
-    payment_method: PaymentMethod
+    payment_method: PaymentMethod,
+    bot_tg_id: int
 ) -> CreateOrderResult:
     body = {
         "user_tg_id": user_tg_id,
@@ -28,7 +29,8 @@ async def create_order(
         "recipient": recipient,
         "order_type": order_type,
         "amount": amount,
-        "payment_method": payment_method
+        "payment_method": payment_method,
+        "bot_tg_id": bot_tg_id
     }
     async with aiohttp.ClientSession() as http:
         async with http.post(f"{PAYMENT_API}/orders", json=body, timeout=30) as r:

@@ -11,6 +11,7 @@ class CreateOrderRequest(BaseModel):
     order_type: OrderType
     amount: int  # звёзды (шт) или премиум (мес)
     payment_method: PaymentMethod
+    bot_tg_id: int
 
 class TonPaymentInfo(BaseModel):
     address: str

@@ -8,6 +8,7 @@ import os, asyncio
 
 from ..repositories.users import UsersRepo
 from ..repositories.orders import OrdersRepo
+from ..repositories.user_bots import UserBotsRepo
 from ..keyboards.common import who_kb, cancel_kb, main_menu_kb, payment_methods_kb, payment_kb, back_nav_kb
 
 from ..services.payments_api import create_order
@@ -115,6 +116,7 @@ def get_router(session_maker: async_sessionmaker) -> Router:
             order_type="stars",
             amount=int(qty),
             payment_method="TON",
+            bot_tg_id=cb.bot.id
         )
         order_id = resp["order_id"]
         ton = resp.get("ton", {})
@@ -122,7 +124,7 @@ def get_router(session_maker: async_sessionmaker) -> Router:
         memo = ton.get("memo")
         amount_ton = ton.get("amount_ton")
         # print(amount_ton)
-        link = f"ton://transfer/{address}?amount={(float(amount_ton) * 1000000)}000&text={memo}"
+        link = f"ton://transfer/{address}?amount={int(float(amount_ton) * 1000000)}000&text={memo}"
 
         await state.clear()
         await cb.message.edit_text(
@@ -153,6 +155,7 @@ def get_router(session_maker: async_sessionmaker) -> Router:
             order_type="stars",
             amount=int(qty),
             payment_method="SBP",
+            bot_tg_id=cb.bot.id
         )
         order_id = resp["order_id"]
         sbp = resp.get("sbp", {})
@@ -186,6 +189,7 @@ def get_router(session_maker: async_sessionmaker) -> Router:
             order_type="stars",
             amount=int(qty),
             payment_method="CRYPTO_OTHER",
+            bot_tg_id=cb.bot.id
         )
         order_id = resp["order_id"]
         url = resp["other"]["redirect_url"]

@@ -116,6 +116,7 @@ def get_router(session_maker: async_sessionmaker) -> Router:
             order_type="premium",
             amount=int(months),
             payment_method="SBP",
+            bot_tg_id=cb.bot.id
         )
         order_id = resp["order_id"]
         sbp = resp.get("sbp", {})
@@ -147,8 +148,12 @@ def get_router(session_maker: async_sessionmaker) -> Router:
             order_type="premium",
             amount=int(months),
             payment_method="TON",
+            bot_tg_id=cb.bot.id
         )
         order_id = resp["order_id"]
+        ton = resp.get("ton", {})
+        address = ton.get("address")
+        memo = ton.get("memo")
         ton = resp.get("ton", {})
         link = f"ton://transfer/{address}?amount={int(amount_ton * 1000000000)}&text={memo}"
         await state.clear()
@@ -180,6 +185,7 @@ def get_router(session_maker: async_sessionmaker) -> Router:
             order_type="premium",
             amount=int(months),
             payment_method="CRYPTO_OTHER",
+            bot_tg_id=cb.bot.id
         )
         order_id = resp["order_id"]
         url = resp["other"]["redirect_url"]
