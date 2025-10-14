@@ -6,47 +6,122 @@ from src.db import SessionLocal
 from src.repositories.pricing import PricingRepo
 from src.utils.owner_scope import resolve_owner_and_bot_key
 
+from ..keyboards.common import pricing_kb, nav_to_menu, product_kb
+
 router = Router(name="pricing")
 
 class PricingStates(StatesGroup):
-    waiting_price = State()
+    waiting_stars_price = State()
+    waiting_premium_price = State()
 
-PRICE_RE = r"^(stars|premium)\s+[A-Z]{3}\s+\d+(?:[.,]\d+)?$"
+# PRICE_RE = r"^\d+(?:[.,]\d+)?$"
+PRICE_RE = r"^\d+\.\d*$"
 
-async def _render_prices(m: types.Message, s, bot_key: int):
+async def _render_prices(m: types.Message, s, bot_key: int, edit: bool = False):
     repo = PricingRepo(s)
     stars = await repo.get_active_manual("stars", "RUB", bot_key)
     prem  = await repo.get_active_manual("premium", "RUB", bot_key)
-    await m.answer(
-        "Текущие manual-цены (RUB):\n"
-        f"• звезда: {stars.manual_price if stars else '—'}\n"
-        f"• премиум/мес: {prem.manual_price if prem else '—'}\n\n"
-        "Отправьте:\n"
-        "<code>stars RUB 1.23</code>\n"
-        "<code>premium RUB 359</code>\n"
-        "/cancel — в меню",
-        parse_mode="HTML"
-    )
+    if edit:
+        await m.edit_text(
+            "Текущие manual-цены (RUB):\n"
+            f"• звезда: {stars.manual_price if stars else '—'}\n"
+            f"• премиум/мес: {prem.manual_price if prem else '—'}\n\n",
+            parse_mode="HTML",
+            reply_markup=pricing_kb()
+        )
+    else:
+        await m.answer(
+            "Текущие manual-цены (RUB):\n"
+            f"• звезда: {stars.manual_price if stars else '—'}\n"
+            f"• премиум/мес: {prem.manual_price if prem else '—'}\n\n",
+            parse_mode="HTML",
+            reply_markup=pricing_kb()
+        )
 
-@router.message(F.text == ("💲 Цены"))
-async def pricing_enter(m: types.Message, state: FSMContext):
+@router.callback_query(F.data == ("pricing"))
+async def pricing_enter(cb: types.CallbackQuery, state: FSMContext):
+    m = cb.message
     async with SessionLocal() as s:
-        _, bot_key = await resolve_owner_and_bot_key(s, m.from_user.id)
-        if not bot_key:
-            await m.answer("Зеркальный бот не найден.")
-            return
-        await _render_prices(m, s, bot_key)
-    await state.set_state(PricingStates.waiting_price)
+        _, bot_key = await resolve_owner_and_bot_key(s, m.chat.id)
+        # if not bot_key:
+        #     await m.edit_text("Зеркальный бот не найден.", reply_markup=)
+        #     return
+        await _render_prices(m, s, bot_key, True)
+    # await state.set_state(PricingStates.waiting_price)
 
-@router.message(PricingStates.waiting_price, F.regexp(PRICE_RE))
+@router.callback_query(F.data == ("change_pricing"))
+async def pricing_enter(cb: types.CallbackQuery, state: FSMContext):
+    m = cb.message
+    async with SessionLocal() as s:
+        _, bot_key = await resolve_owner_and_bot_key(s, m.chat.id)
+        # if not bot_key:
+        #     await m.edit_text("Зеркальный бот не найден.", reply_markup=)
+        #     return
+        await m.edit_text(text="Выберите продукт для изменения цены:", reply_markup=product_kb())
+    # await state.set_state(PricingStates.waiting_price)
+
+@router.callback_query(F.data == ("change_stars"))
+async def pricing_enter(cb: types.CallbackQuery, state: FSMContext):
+    m = cb.message
+    async with SessionLocal() as s:
+        _, bot_key = await resolve_owner_and_bot_key(s, m.chat.id)
+        # if not bot_key:
+        #     await m.edit_text("Зеркальный бот не найден.", reply_markup=)
+        #     return
+        await m.edit_text(text="Введите новую цену для звезд:", reply_markup=nav_to_menu())
+    await state.set_state(PricingStates.waiting_stars_price)
+
+@router.callback_query(F.data == ("change_premium"))
+async def pricing_enter(cb: types.CallbackQuery, state: FSMContext):
+    m = cb.message
+    async with SessionLocal() as s:
+        _, bot_key = await resolve_owner_and_bot_key(s, m.chat.id)
+        # if not bot_key:
+        #     await m.edit_text("Зеркальный бот не найден.", reply_markup=)
+        #     return
+        await m.edit_text(text="Введите новую цену для премиума:", reply_markup=nav_to_menu())
+    await state.set_state(PricingStates.waiting_premium_price)
+
+@router.message(PricingStates.waiting_stars_price)
 async def pricing_set(m: types.Message, state: FSMContext):
-    item, currency, price_s = (m.text or "").split()
-    price = float(price_s.replace(",", "."))
+    try:
+        price = float(m.text.replace(",", "."))
+    except:
+        m.edit_text("Неправильный ввод, попробуйте еще раз:", nav_to_menu())
+    # price = float(price_s.replace(",", "."))
     async with SessionLocal() as s:
-        _, bot_key = await resolve_owner_and_bot_key(s, m.from_user.id)
-        if not bot_key:
-            await m.answer("Зеркальный бот не найден.")
-            return
-        await PricingRepo(s).upsert_manual(item.lower(), currency.upper(), price, bot_key)
-        await m.answer("Сохранено.")
+        _, bot_key = await resolve_owner_and_bot_key(s, m.chat.id)
+        # if not bot_key:
+        #     await m.answer("Зеркальный бот не найден.")
+        #     return
+        repo = PricingRepo(s)
+        stars = await repo.get_active_manual("stars", "RUB", bot_key)
+        if stars:
+            await repo.change_manual("stars", "RUB", price, bot_key)
+        else:
+            await repo.upsert_manual("stars", "RUB", price, bot_key)
+        # await m.edit_text("Сохранено.", reply_markup=nav_to_menu())
         await _render_prices(m, s, bot_key)
+    await state.clear()
+
+@router.message(PricingStates.waiting_premium_price)
+async def pricing_set(m: types.Message, state: FSMContext):
+    try:
+        price = float(m.text.replace(",", "."))
+    except:
+        m.edit_text("Неправильный ввод, попробуйте еще раз:", nav_to_menu())
+    # price = float(price_s.replace(",", "."))
+    async with SessionLocal() as s:
+        _, bot_key = await resolve_owner_and_bot_key(s, m.chat.id)
+        # if not bot_key:
+        #     await m.answer("Зеркальный бот не найден.")
+        #     return
+        repo = PricingRepo(s)
+        stars = await repo.get_active_manual("premium", "RUB", bot_key)
+        if stars:
+            await repo.change_manual("premium", "RUB", price, bot_key)
+        else:
+            await repo.upsert_manual("premium", "RUB", price, bot_key)
+        # await m.edit_text("Сохранено.", reply_markup=nav_to_menu())
+        await _render_prices(m, s, bot_key)
+    await state.clear()

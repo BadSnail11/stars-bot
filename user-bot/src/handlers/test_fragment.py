@@ -14,9 +14,9 @@ def get_router() -> Router:
 
     @router.message(Command("test_stars"))
     async def test_stars(m: types.Message, command: CommandObject):
-        if not _is_admin(m.from_user.id):
-            await m.answer("⛔ Недостаточно прав.")
-            return
+        # if not _is_admin(m.from_user.id):
+        #     await m.answer("⛔ Недостаточно прав.")
+        #     return
 
         if not command.args:
             await m.answer(

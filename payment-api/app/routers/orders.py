@@ -17,6 +17,8 @@ from ..services.referral_accrual import accrue_referral_reward
 from ..services import heleket as hk
 import os, asyncio
 from decimal import Decimal
+from ..services.fragment import buy_stars, buy_premium
+
 
 router = APIRouter(prefix="/orders", tags=["orders"])
 
@@ -26,7 +28,7 @@ async def create_order(payload: CreateOrderRequest):
         users = UsersRepo(session)
         orders = OrdersRepo(session)
 
-        user = await users.upsert_from_tg_payload(payload.user_tg_id, payload.username)
+        user = await users.get_by_tg_id(payload.user_tg_id)
 
         # ветвим по типу и способу оплаты
         if payload.order_type == "stars":
@@ -126,6 +128,7 @@ async def create_order(payload: CreateOrderRequest):
                 return CreateOrderResponse(
                     order_id=order.id,
                     status=order.status,
+                    other={"redirect_url": inv.get("result", {}).get("url"), "transaction_id": inv.get("result", {}).get("uuid"), "amount_rub": amount_rub},
                     message="Оплатите по ссылке Heleket",
                 )
 
@@ -221,6 +224,7 @@ async def create_order(payload: CreateOrderRequest):
                 return CreateOrderResponse(
                     order_id=order.id,
                     status=order.status,
+                    other={"redirect_url": inv.get("result", {}).get("url"), "transaction_id": inv.get("result", {}).get("uuid"), "amount_rub": amount_rub},
                     message="Оплатите по ссылке Heleket",
                 )
 
@@ -276,6 +280,15 @@ async def _background_sbp_check(order_id: int, tx_id: str):
 
 async def _background_heleket_check(order_id: int):
     from ..services.heleket import wait_invoice_paid
-    res = await wait_invoice_paid(order_id=str(order_id))
+    res = await wait_invoice_paid(order_id=str(order_id), poll_interval=10)
     if res:
         await _on_paid(order_id, res.get("txid"))
+
+# async def _update_ton_price():
+#     stars_price = 0
+#     try:
+#         resp = await buy_stars(recipient="string", quantity=50)
+#         # pretty = json.dumps(resp, ensure_ascii=False, indent=2)
+#     except Exception as e:
+#         # Fragment API error 400: {'errors': [{'code': '0', 'error': "Not enough funds for wallet '0:50f4fdaaddd1acf8e8f9f3d1feed090875288cdcbceb613d4730c9780538298e' balance: '0.012356103 TON', transaction total: 0.339800000 TON"}]}
+#         stars_price = e["errors"][0]["transaction total"]

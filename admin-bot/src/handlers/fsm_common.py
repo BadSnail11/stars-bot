@@ -5,7 +5,6 @@ from aiogram.fsm.context import FSMContext
 router = Router(name="fsm_common")
 
 @router.message(Command("cancel"))
-@router.message(Command("menu"))
 async def cancel_or_menu(m: types.Message, state: FSMContext):
     await state.clear()
     await m.answer(

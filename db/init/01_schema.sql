@@ -19,8 +19,11 @@ CREATE TABLE IF NOT EXISTS user_bots (
   tg_bot_id BIGINT UNIQUE,
   bot_username TEXT,
   is_active BOOLEAN DEFAULT TRUE,
+  is_super BOOLEAN default FALSE,
   created_at TIMESTAMP DEFAULT NOW()
 );
+
+ALTER TABLE users ADD COLUMN bot_id BIGINT NOT NULL REFERENCES user_bots(id);
 
 -- обязательные каналы для подписки
 CREATE TABLE IF NOT EXISTS required_channels (

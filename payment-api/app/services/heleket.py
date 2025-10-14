@@ -8,9 +8,18 @@ PAYMENT_KEY = os.getenv("HELEKET_PAYMENT_API_KEY", "")
 
 def _sign_payload(payload_obj: dict) -> str:
     # md5(base64(json) + API_KEY)
-    raw = json.dumps(payload_obj, ensure_ascii=False, separators=(",", ":"))
-    b64 = base64.b64encode(raw.encode("utf-8")).decode("ascii")
-    return hashlib.md5((b64 + PAYMENT_KEY).encode("utf-8")).hexdigest()
+    # raw = json.dumps(payload_obj, ensure_ascii=False, separators=(",", ":"))
+    # b64 = base64.b64encode(raw.encode("utf-8")).decode("ascii")
+    # return hashlib.md5((b64 + PAYMENT_KEY).encode("utf-8")).hexdigest()
+    data = json.dumps(payload_obj)  # или json.dumps(data, ensure_ascii=False) для кириллицы
+
+    # PHP: $sign = md5(base64_encode($data) . $API_KEY);
+    # Кодируем данные в base64
+    encoded_data = base64.b64encode(data.encode('utf-8')).decode('utf-8')
+
+    # Создаем подпись MD5
+    sign = hashlib.md5(f"{encoded_data}{PAYMENT_KEY}".encode('utf-8')).hexdigest()
+    return sign
 
 async def _post_json(path: str, payload: dict) -> dict:
     url = f"{HELEKET_BASE}{path}"
@@ -92,7 +101,7 @@ async def wait_invoice_paid(order_id: str, *, poll_interval: float = 5.0, timeou
             if is_paid_status(st):
                 return res
             # финальные неуспешные можно обрывать: cancel/fail/system_fail
+            print(st)
             if st in {"cancel", "fail", "system_fail"} or res.get("is_final") is True:
-                return None
         await asyncio.sleep(poll_interval)
     return None

@@ -13,7 +13,7 @@ from .db import init_engine, close_engine, get_session_maker
 # from .build_dispatcher import build_dispatcher
 from .utils import on_startup_banner
 from src.handlers import mirror
-from .handlers import start, menu, stars, premium, history, referral
+from .handlers import start, menu, stars, premium, history, referral, test_fragment
 from .services.mirror_manager import MirrorManager
 from src.services.polling_manager import PollingManager
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
@@ -33,17 +33,17 @@ async def _load_tokens(session_maker: async_sessionmaker) -> list[str]:
     Ровно как в примере: список токенов -> затем run_all(dp, tokens).
     """
     tokens: list[str] = []
-    main_token = os.getenv("USER_BOT_TOKEN", "").strip()
-    if not main_token:
-        raise RuntimeError("USER_BOT_TOKEN не задан")
+    # main_token = os.getenv("USER_BOT_TOKEN", "").strip()
+    # if not main_token:
+    #     raise RuntimeError("USER_BOT_TOKEN не задан")
 
-    tokens.append(main_token)
+    # tokens.append(main_token)
 
     async with session_maker() as session:
         rows = (await session.execute(
             select(UserBot.tg_bot_token).where(UserBot.is_active.is_(True))
         )).scalars().all()
-        tokens.extend(t for t in rows if t and t != main_token)
+        tokens.extend(t for t in rows if t)
 
     # Уберём дубли на всякий:
     seen, uniq = set(), []
@@ -88,6 +88,7 @@ async def main():
     dp.include_router(history.get_router(session_maker))
     dp.include_router(referral.get_router(session_maker))
     dp.include_router(mirror.get_router(session_maker))
+    dp.include_router(test_fragment.get_router())
 
     polling_manager = PollingManager()
 

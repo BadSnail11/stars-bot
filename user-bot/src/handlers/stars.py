@@ -184,10 +184,11 @@ def get_router(session_maker: async_sessionmaker) -> Router:
             payment_method="CRYPTO_OTHER",
         )
         order_id = resp["order_id"]
-        msg = resp.get("message") or "Счёт Heleket создан. Перейдите по ссылке на странице оплаты."
+        info = resp["other"]["redirect_url"]
+        # msg = resp.get("message") or "Счёт Heleket создан. Перейдите по ссылке на странице оплаты."
 
         await state.clear()
-        await cb.message.edit_text(f"🪙 Heleket\nЗаказ №{order_id}: {qty} ⭐\n{msg}")
+        await cb.message.edit_text(f"🪙 Heleket\nЗаказ №{order_id}: {qty} ⭐\nСсылка для оплаты:\n{info}")
         # Если хочешь показать URL сразу здесь — расширь ответ Payment API (добавь поле heleket.url)
         await _start_polling(cb, order_id)
         

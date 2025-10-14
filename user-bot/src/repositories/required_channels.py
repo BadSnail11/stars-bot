@@ -8,7 +8,7 @@ class RequiredChannelsRepo:
         self.session = session
 
     async def list_active_for_bot_key(self, bot_key: Optional[int]) -> List[RequiredChannel]:
-        print(bot_key)
+        # print(bot_key)
         if bot_key is None:
             q = select(RequiredChannel).where(
                 RequiredChannel.bot_key.is_(None),

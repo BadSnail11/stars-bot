@@ -8,7 +8,7 @@ from aiogram.enums import ParseMode
 from aiogram.fsm.storage.base import DefaultKeyBuilder
 
 # from .db import init_engine, close_engine, get_session_maker
-from .handlers import start, menu, broadcasts, channels, pricing, stats, fsm_common
+from .handlers import start, menu, broadcasts, channels, pricing, stats, fsm_common, super
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlalchemy import select
 
@@ -49,6 +49,7 @@ async def main():
     dp.include_router(channels.router)
     dp.include_router(broadcasts.router)
     dp.include_router(stats.router)
+    dp.include_router(super.router)
 
     await dp.start_polling(bot)
 

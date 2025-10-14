@@ -3,7 +3,7 @@ CREATE INDEX IF NOT EXISTS idx_users_created_at ON users (created_at);
 CREATE INDEX IF NOT EXISTS idx_users_blocked ON users (is_blocked);
 
 -- required_channels
-CREATE UNIQUE INDEX IF NOT EXISTS uq_required_channels_channel ON required_channels (channel_username);
+CREATE INDEX IF NOT EXISTS uq_required_channels_channel ON required_channels (channel_username);
 
 -- orders
 CREATE INDEX IF NOT EXISTS idx_orders_user_id ON orders (user_id);

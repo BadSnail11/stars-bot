@@ -13,6 +13,7 @@ class CreateOrderResult(TypedDict, total=False):
     message: Optional[str]
     ton: dict
     sbp: dict
+    other: dict
     # у HELEKET ответ может прийти текстом в message (или расширите API при желании)
 
 async def create_order(

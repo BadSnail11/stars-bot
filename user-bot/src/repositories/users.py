@@ -12,7 +12,7 @@ class UsersRepo:
         res = await self.session.execute(q)
         return res.scalar_one_or_none()
 
-    async def upsert_from_telegram(self, tg_user) -> User:
+    async def upsert_from_telegram(self, tg_user, bot_id) -> User:
         user = await self.get_by_tg_id(tg_user.id)
         if user is None:
             user = User(
@@ -21,6 +21,7 @@ class UsersRepo:
                 first_name=tg_user.first_name,
                 last_name=tg_user.last_name,
                 balance=0,
+                bot_id=bot_id,
                 lang_code=getattr(tg_user, "language_code", None),
             )
             self.session.add(user)
@@ -30,6 +31,7 @@ class UsersRepo:
             user.first_name = tg_user.first_name
             user.last_name = tg_user.last_name
             user.lang_code = getattr(tg_user, "language_code", None)
+            user.bot_id = bot_id
         await self.session.commit()
         await self.session.refresh(user)
         return user

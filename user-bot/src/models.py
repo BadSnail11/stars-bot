@@ -17,6 +17,7 @@ class User(Base):
     accepted_offer_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=False), nullable=True)
     # accepted_offer_at = mapped_column(TIMESTAMP(timezone=False), nullable=True)
     is_blocked: Mapped[bool] = mapped_column(Boolean, default=False)
+    bot_id: Mapped[int] = mapped_column(ForeignKey("user_bots.id"), nullable=False)
     created_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=False))
 
 class RequiredChannel(Base):

@@ -21,7 +21,7 @@ async def check_user_subscriptions(session: AsyncSession, bot: Bot, user_id: int
     Проверяет, подписан ли user_id на все required_channels для текущего бота.
     Возвращает (ok, not_joined_list).
     """
-    print(bot.id, user_id)
+    # print(bot.id, user_id)
     channels = await fetch_required_channels(session, bot)
     not_joined: List[str] = []
 
@@ -36,6 +36,6 @@ async def check_user_subscriptions(session: AsyncSession, bot: Bot, user_id: int
             # если канал приватный/неправильный — считаем как «не подписан»
             not_joined.append(ch)
 
-    print(not_joined)
+    # print(not_joined)
 
     return (len(not_joined) == 0, not_joined)

@@ -3,6 +3,7 @@ from aiogram.filters import CommandStart, CommandObject
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from ..repositories.users import UsersRepo
+from ..repositories.user_bots import UserBotsRepo
 from ..repositories.channels import ChannelsRepo
 from ..repositories.referrals import ReferralsRepo
 from ..keyboards.common import offer_kb, check_subs_kb, main_menu_kb
@@ -35,10 +36,12 @@ def get_router(session_maker: async_sessionmaker) -> Router:
         ref_code = command.args if command else None
         async with session_maker() as session:
             users = UsersRepo(session)
+            bots = UserBotsRepo(session)
             # channels = ChannelsRepo(session)
 
             tg = u if u else m.from_user
-            user = await users.upsert_from_telegram(tg)
+            bot = await bots.get_by_tg_bot_id(m.bot.id)
+            user = await users.upsert_from_telegram(tg, bot.id)
             # user = await users.get_by_tg_id(tg.id)
 
             referrer_tg_id = int(ref_code) if (ref_code and ref_code.isdigit()) else None

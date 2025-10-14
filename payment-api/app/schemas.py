@@ -22,11 +22,17 @@ class SbpPaymentInfo(BaseModel):
     transaction_id: str
     amount_rub: int
 
+class OtherPaymentInfo(BaseModel):
+    redirect_url: str
+    transaction_id: str
+    amount_rub: int
+
 class CreateOrderResponse(BaseModel):
     order_id: int
     status: Literal["pending", "paid", "failed"]
     ton: Optional[TonPaymentInfo] = None
     sbp: Optional[SbpPaymentInfo] = None
+    other: Optional[OtherPaymentInfo] = None
     message: Optional[str] = None
 
 class OrderStatusResponse(BaseModel):
