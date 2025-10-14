@@ -101,7 +101,6 @@ async def wait_invoice_paid(order_id: str, *, poll_interval: float = 5.0, timeou
             if is_paid_status(st):
                 return res
             # финальные неуспешные можно обрывать: cancel/fail/system_fail
-            print(st)
             if st in {"cancel", "fail", "system_fail"} or res.get("is_final") is True:
-        await asyncio.sleep(poll_interval)
+                await asyncio.sleep(poll_interval)
     return None
