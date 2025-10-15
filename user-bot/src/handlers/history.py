@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 from datetime import datetime
 from ..repositories.users import UsersRepo
 from ..repositories.orders import OrdersRepo
+from ..repositories.user_bots import UserBotsRepo
 from ..keyboards.common import history_nav_kb, main_menu_kb, back_nav_kb
 
 PAGE_SIZE = 10
@@ -39,8 +40,10 @@ def get_router(session_maker: async_sessionmaker) -> Router:
         async with session_maker() as session:
             users = UsersRepo(session)
             orders = OrdersRepo(session)
+            userbots = UserBotsRepo(session)
 
-            user = await users.upsert_from_telegram(user_tg)
+            bot = await userbots.get_by_tg_bot_id(cb.bot.id)
+            user = await users.upsert_from_telegram(user_tg, bot.id)
             total = await orders.count_paid_by_user(user.id)
             rows = await orders.list_paid_by_user(user.id, limit=PAGE_SIZE, offset=offset)
 
