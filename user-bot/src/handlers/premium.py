@@ -9,7 +9,7 @@ import os, asyncio
 
 from ..repositories.users import UsersRepo
 from ..repositories.orders import OrdersRepo
-from ..keyboards.common import who_kb, cancel_kb, main_menu_kb, payment_methods_kb, premium_duration_kb, payment_kb
+from ..keyboards.common import who_kb, cancel_kb, main_menu_kb, payment_methods_kb, premium_duration_kb, payment_kb, back_nav_kb
 
 from ..services.payments_api import create_order
 from ..services.order_poll import poll_until_paid
@@ -93,9 +93,9 @@ def get_router(session_maker: async_sessionmaker) -> Router:
     async def _start_polling(cb: types.CallbackQuery, order_id: int):
         async def _on_paid(data: dict):
             msg = data.get("message") or "Оплата подтверждена."
-            await cb.message.answer(f"✅ Премиум — заказ №{order_id} завершён!\n{msg}")
+            await cb.message.answer(f"✅ Премиум — заказ №{order_id} завершён!\n{msg}", reply_markup=back_nav_kb())
         async def _on_timeout():
-            await cb.message.answer(f"⏳ Заказ №{order_id}: время ожидания истекло.")
+            await cb.message.answer(f"⏳ Заказ №{order_id}: время ожидания истекло.", reply_markup=back_nav_kb())
         asyncio.create_task(poll_until_paid(order_id, on_paid=_on_paid, on_timeout=_on_timeout))
 
     # ====== СБП (Platega, RUB) ======
@@ -105,7 +105,7 @@ def get_router(session_maker: async_sessionmaker) -> Router:
         months = data.get("months")
         recipient = data.get("recipient")
         if not months:
-            await cb.message.answer("Не вижу срок. Начните заново: «👑 Премиум».")
+            await cb.message.answer("Не вижу срок. Начните заново: «👑 Премиум».", reply_markup=back_nav_kb())
             await state.clear()
             return
 
@@ -120,13 +120,16 @@ def get_router(session_maker: async_sessionmaker) -> Router:
         )
         order_id = resp["order_id"]
         sbp = resp.get("sbp", {})
+        redirect = sbp.get("redirect_url")
         await state.clear()
         await cb.message.edit_text(
-            "🏦 СБП — платёж создан.\n"
-            f"Заказ №{order_id}: Premium {months} мес. на {sbp.get('amount_rub')} RUB\n"
-            # f"Ссылка на оплату: {}\n\n"
-            "Оплатите в течение 15 минут.",
-            reply_markup=payment_kb(sbp.get('redirect_url'))
+            "🏦 Платёж СБП\n"
+            f"Заказ №{order_id}: {data.get("qty")} ⭐\n\n"
+            "Нажмите на копку <b>Оплатить</b> для перехода к оплате\n\n"
+            "Либо перейдите по ссылке:\n"
+            f"<code>{redirect}</code>\n\n"
+            "Счет для оплаты действителен 15 минут",
+            reply_markup=payment_kb(redirect)
         )
         await _start_polling(cb, order_id)
 
@@ -137,7 +140,7 @@ def get_router(session_maker: async_sessionmaker) -> Router:
         months = data.get("months")
         recipient = data.get("recipient")
         if not months:
-            await cb.message.answer("Не вижу срок. Начните заново: «👑 Премиум».")
+            await cb.message.answer("Не вижу срок. Начните заново: «👑 Премиум».", reply_markup=back_nav_kb())
             await state.clear()
             return
 
@@ -155,14 +158,18 @@ def get_router(session_maker: async_sessionmaker) -> Router:
         address = ton.get("address")
         memo = ton.get("memo")
         ton = resp.get("ton", {})
-        link = f"ton://transfer/{address}?amount={int(amount_ton * 1000000000)}&text={memo}"
+        amount_ton = ton.get("amount_ton")
+        link = f"ton://transfer/{address}?amount={int(float(amount_ton) * 1000000000)}&text={memo}"
         await state.clear()
         await cb.message.edit_text(
-            f"Заказ №{order_id}: Premium {months} мес."
             "💎 Платёж (TON)\n"
-            f"➤ Адрес: <code>{ton.get('address')}</code>\n"
-            f"➤ Сумма: <b>{ton.get('amount_ton')}</b> TON\n"
-            f"➤ Комментарий: <code>{ton.get('memo')}</code>\n\n",
+            f"Заказ №{order_id}: {data.get("qty")} ⭐\n\n"
+            f"Переведите <code>{amount_ton}</code> TON на адрес:\n"
+            f"<code>{address}</code>\n\n"
+            f"❗️ Обязательно укажите комментарий (TAG/MEMO):\n"
+            f"<code>{memo}</code>\n\n"
+            f"Если вы не укажите комментарий - ваш депозит не будет зачислен\n\n"
+            f"Счет для оплаты действителен 15 минут",
             reply_markup=payment_kb(link)
         )
         await _start_polling(cb, order_id)
@@ -174,7 +181,7 @@ def get_router(session_maker: async_sessionmaker) -> Router:
         months = data.get("months")
         recipient = data.get("recipient")
         if not months:
-            await cb.message.answer("Не вижу срок. Начните заново: «👑 Премиум».")
+            await cb.message.answer("Не вижу срок. Начните заново: «👑 Премиум».", reply_markup=back_nav_kb())
             await state.clear()
             return
 
@@ -190,8 +197,14 @@ def get_router(session_maker: async_sessionmaker) -> Router:
         order_id = resp["order_id"]
         url = resp["other"]["redirect_url"]
         msg = resp.get("message") or "Счёт Heleket создан. Перейдите по ссылке на странице оплаты."
+        qty = data.get("qty")
         await state.clear()
-        await cb.message.edit_text(f"🪙 Heleket\nЗаказ №{order_id}: Premium {months} мес.\n{msg}", reply_markup=payment_kb(url))
+        await cb.message.edit_text(f"🪙 Платёж Heleket\n"
+                                    f"Заказ №{order_id}: {qty} ⭐\n\n"
+                                    "Нажмите на копку <b>Оплатить</b> для перехода к оплате\n\n"
+                                    "Либо перейдите по ссылке:\n"
+                                    f"<code>{url}</code>\n\n"
+                                    "Счет для оплаты действителен 15 минут", reply_markup=payment_kb(url))
         await _start_polling(cb, order_id)
 
     return router
