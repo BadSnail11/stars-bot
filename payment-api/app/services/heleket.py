@@ -43,6 +43,7 @@ async def create_invoice(
     amount: str,
     currency: str,
     order_id: str,
+    user_tg_id: str,
     *,
     to_currency: Optional[str] = None,
     network: Optional[str] = None,
@@ -55,10 +56,11 @@ async def create_invoice(
     POST /v1/payment — создаём инвойс (возвращает uuid, url, address, payment_status и т.д.)
     Документация: https://doc.heleket.com/methods/payments/creating-invoice
     """
+    gen_order_id = await generate_order_id(order_id, user_tg_id)
     payload = {
         "amount": str(amount),
         "currency": currency,         # напр. RUB (мы конвертим в to_currency)
-        "order_id": order_id,         # должен быть уникален
+        "order_id": gen_order_id,         # должен быть уникален
     }
     if to_currency: payload["to_currency"] = to_currency  # напр. "USDT"
     if network:     payload["network"] = network          # напр. "tron"
@@ -75,7 +77,7 @@ async def create_invoice(
 
     return await _post_json("/v1/payment", payload)
 
-async def get_payment_info(*, uuid: Optional[str] = None, order_id: Optional[str] = None) -> dict:
+async def get_payment_info(*, uuid: Optional[str] = None, order_id: Optional[str] = None, user_tg_id: Optional[str] = None) -> dict:
     """
     POST /v1/payment/info — информация/статус инвойса.
     Документация: https://doc.heleket.com/methods/payments/payment-information
@@ -84,14 +86,16 @@ async def get_payment_info(*, uuid: Optional[str] = None, order_id: Optional[str
         raise ValueError("uuid or order_id required")
     payload = {}
     if uuid: payload["uuid"] = uuid
-    if order_id: payload["order_id"] = order_id
+    if order_id and user_tg_id: 
+        gen_order_id = await generate_order_id(order_id, user_tg_id)
+        payload["order_id"] = gen_order_id
     return await _post_json("/v1/payment/info", payload)
 
 def is_paid_status(status: str) -> bool:
     # Статусы по докам: paid, paid_over — считаем как успешную оплату
     return (status or "").lower() in {"paid", "paid_over"}
 
-async def wait_invoice_paid(order_id: str, *, poll_interval: float = 5.0, timeout: float = 900.0) -> Optional[dict]:
+async def wait_invoice_paid(order_id: str, *, poll_interval: float = 10.0, timeout: float = 900.0) -> Optional[dict]:
     """
     Пуллинг статуса до paid/paid_over/исчерпания таймаута.
     Возвращает объект платежа (result) если оплачен, иначе None.
@@ -123,3 +127,6 @@ async def create_withdraw(order_id: str, to_address: str, amount: str) -> dict:
             "network": "TRON"
         }
     return await _post_json("/v1/payout", body, True)
+
+async def generate_order_id(order_id: str, user_tg_id: str):
+    return hashlib.md5(f"{order_id}{user_tg_id}".encode('utf-8')).hexdigest()

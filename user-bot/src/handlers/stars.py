@@ -135,7 +135,7 @@ def get_router(session_maker: async_sessionmaker) -> Router:
             f"❗️ Обязательно укажите комментарий (TAG/MEMO):\n"
             f"<code>{memo}</code>\n\n"
             f"Если вы не укажите комментарий - ваш депозит не будет зачислен\n\n"
-            f"Счет для оплаты действителен _ минут",
+            f"Счет для оплаты действителен 15 минут",
             reply_markup=payment_kb(link)
         )
         await _start_polling(cb, order_id)
@@ -172,7 +172,7 @@ def get_router(session_maker: async_sessionmaker) -> Router:
             "Нажмите на копку <b>Оплатить</b> для перехода к оплате\n\n"
             "Либо перейдите по ссылке:\n"
             f"<code>{redirect}</code>\n\n"
-            "Счет для оплаты действителен _ минут",
+            "Счет для оплаты действителен 15 минут",
             reply_markup=payment_kb(redirect)
         )
         await _start_polling(cb, order_id)
@@ -206,7 +206,7 @@ def get_router(session_maker: async_sessionmaker) -> Router:
                                     "Нажмите на копку <b>Оплатить</b> для перехода к оплате\n\n"
                                     "Либо перейдите по ссылке:\n"
                                     f"<code>{url}</code>\n\n"
-                                    "Счет для оплаты действителен _ минут",
+                                    "Счет для оплаты действителен 15 минут",
                                     reply_markup=payment_kb(url))
         # Если хочешь показать URL сразу здесь — расширь ответ Payment API (добавь поле heleket.url)
         await _start_polling(cb, order_id)

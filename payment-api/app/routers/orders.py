@@ -107,10 +107,12 @@ async def create_order(payload: CreateOrderRequest):
                     price=amount_rub
                 )
 
+
                 inv = await hk.create_invoice(
                     amount=f"{amount_rub:.2f}",
                     currency="RUB",
-                    order_id=str(order.id),   # важно: уникальный
+                    order_id=str(order.id),   # важно: уникальный,
+                    user_tg_id=str(payload.user_tg_id),
                     to_currency="USDT",
                     # network=os.getenv("HELEKET_PAYER_NETWORK","tron"),
                     # url_return=os.getenv("HELEKET_RETURN_URL"),
