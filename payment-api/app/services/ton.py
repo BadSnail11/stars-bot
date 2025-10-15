@@ -1,6 +1,7 @@
 import os, asyncio, aiohttp
 from typing import Optional, Tuple
 from decimal import Decimal
+import hashlib
 
 
 def _env(name: str, default: Optional[str] = None) -> Optional[str]:
@@ -91,3 +92,6 @@ async def wait_ton_payment(wallet: str, memo: str, min_amount_ton: Decimal) -> O
             await asyncio.sleep(interval)
             elapsed += interval
     return None
+
+async def generate_memo(preffix: str, order_id: str, user_tg_id: str):
+    return hashlib.md5(f"{preffix}{order_id}{user_tg_id}".encode('utf-8')).hexdigest()

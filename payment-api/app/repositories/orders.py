@@ -121,3 +121,9 @@ class OrdersRepo:
         )
         await self.session.commit()
 
+    async def change_memo(self, order_id: int, memo: str):
+        q = (
+            update(Order).where(Order.id==order_id).values(memo=memo)
+        )
+        await self.session.execute(q)
+

@@ -11,7 +11,7 @@ from ..services.pricing import (
     get_premium_price_in_ton, calc_ton_for_premium,
     get_premium_price_in_rub, calc_rub_for_premium,
 )
-from ..services.ton import wait_ton_payment
+from ..services.ton import wait_ton_payment, generate_memo
 from ..services.platega import create_sbp_invoice, wait_payment_confirmed
 from ..services.fulfillment import fulfill_order
 from ..services.referral_accrual import accrue_referral_reward
@@ -50,7 +50,7 @@ async def create_order(payload: CreateOrderRequest):
                 wallet = os.getenv("TON_WALLET")
                 if not wallet:
                     raise HTTPException(500, "TON_WALLET not configured")
-                memo = f"{os.getenv('TON_MEMO_PREFIX','INV-')}{payload.user_tg_id}"
+                # memo = f"{os.getenv('TON_MEMO_PREFIX','INV-')}{payload.user_tg_id}"
                 order = await orders.create_pending_ton_order(
                     user_id=user.id,
                     username=user.username,
@@ -58,9 +58,12 @@ async def create_order(payload: CreateOrderRequest):
                     type=payload.order_type,
                     amount=qty,
                     price=float(total_ton),
-                    memo=memo,
+                    memo="",
                     wallet=wallet
                 )
+                order_id = str(order.id)
+                memo = generate_memo(os.getenv('TON_MEMO_PREFIX','INV-'), order_id, str(user.tg_user_id))
+                await orders.change_memo(order.id, memo)
                 # запустим фоновую проверку TON
                 asyncio.create_task(_background_ton_check(order.id, wallet, memo, total_ton))
                 return CreateOrderResponse(
@@ -156,7 +159,7 @@ async def create_order(payload: CreateOrderRequest):
                 wallet = os.getenv("TON_WALLET")
                 if not wallet:
                     raise HTTPException(500, "TON_WALLET not configured")
-                memo = f"{os.getenv('TON_MEMO_PREFIX','INV-')}P-{payload.user_tg_id}"
+                # memo = f"{os.getenv('TON_MEMO_PREFIX','INV-')}P-{payload.user_tg_id}"
                 order = await orders.create_pending_ton_order(
                     user_id=user.id,
                     username=user.username,
@@ -164,9 +167,12 @@ async def create_order(payload: CreateOrderRequest):
                     type=payload.payment_method,
                     amount=months,
                     price=float(total_ton),
-                    memo=memo,
+                    memo="",
                     wallet=wallet
                 )
+                order_id = str(order.id)
+                memo = generate_memo(os.getenv('TON_MEMO_PREFIX','INV-'), order_id, str(user.tg_user_id))
+                await orders.change_memo(order.id, memo)
                 asyncio.create_task(_background_ton_check(order.id, wallet, memo, total_ton))
                 return CreateOrderResponse(
                     order_id=order.id, status=order.status,
@@ -212,6 +218,7 @@ async def create_order(payload: CreateOrderRequest):
                     currency="RUB",
                     order_id=str(order.id),
                     to_currency="USDT",
+                    user_tg_id=user.tg_user_id
                     # network=os.getenv("HELEKET_PAYER_NETWORK","tron"),
                     # url_return=os.getenv("HELEKET_RETURN_URL"),
                     # url_success=os.getenv("HELEKET_SUCCESS_URL"),
