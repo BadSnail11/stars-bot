@@ -3,12 +3,22 @@ from fastapi import FastAPI
 from .routers import orders, withdrawals
 from contextlib import asynccontextmanager
 from .redis import get_redis, close_redis
+import asyncio
+from .services.pricing import update_ton_price
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # startup
     _ = await get_redis()
+
+    task = asyncio.create_task(update_ton_price())
+
     yield
+
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass
     # shutdown
     await close_redis()
 

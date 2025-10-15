@@ -57,3 +57,8 @@ class UserBotsRepo:
             .values(is_active=False)
         )
         await self.session.commit()
+
+    async def get_all(self):
+        r = await self.session.execute(select(UserBot))
+        bots = r.all()
+        return bots

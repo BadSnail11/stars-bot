@@ -1,12 +1,15 @@
 from decimal import Decimal, ROUND_UP, ROUND_HALF_UP
 from sqlalchemy.ext.asyncio import AsyncSession
 from ..repositories.pricing import PricingRepo
+from ..repositories.user_bots import UserBotsRepo
 from .fragment import get_prices
+from ..db import SessionLocal
+import asyncio
 
 async def get_star_price_in_ton(session: AsyncSession, bot_id: int) -> Decimal:
     repo = PricingRepo(session)
     # rule = await repo.get_active_manual(item_type="stars", currency="TON", bot_id=bot_id)
-    await update_ton_price(repo=repo, bot_id=bot_id)
+    # await update_ton_price(repo=repo, bot_id=bot_id)
     rule = await repo.get_active_dynamic(item_type="stars", currency="TON", bot_id=bot_id)
     if not rule or rule.manual_price is None:
         raise RuntimeError("Не задана цена 'stars' в TON (pricing_rules)")
@@ -38,7 +41,7 @@ async def get_premium_price_in_rub(session: AsyncSession, bot_id: int) -> Decima
 
 async def get_premium_price_in_ton(session: AsyncSession, bot_id: int) -> Decimal:
     repo = PricingRepo(session)
-    await update_ton_price(repo=repo, bot_id=bot_id)
+    # await update_ton_price(repo=repo, bot_id=bot_id)
     rule = await repo.get_active_dynamic(item_type="premium", currency="TON", bot_id=bot_id)
     if not rule or rule.manual_price is None:
         raise RuntimeError("Не задана цена 'premium' в TON (pricing_rules)")
@@ -83,8 +86,14 @@ async def get_ton_price_in_rub(session: AsyncSession, bot_id: int) -> Decimal:
     return Decimal(str(rule.manual_price))
 
 
-async def update_ton_price(repo: PricingRepo, bot_id: int):
+async def update_ton_price():
     stars_price, premium_price = await get_prices()
-    await repo.set_active("stars", "TON", stars_price, bot_id)
-    await repo.set_active("premium", "TON", premium_price, bot_id)
-
+    async with SessionLocal() as session:
+        repo = PricingRepo(session)
+        user_bots = UserBotsRepo(session)
+        bots = user_bots.get_all()
+        for bot in bots:
+            await repo.set_active("stars", "TON", stars_price, bot.id)
+            await repo.set_active("premium", "TON", premium_price, bot.id)
+    print("prices updated")
+    await asyncio.sleep(60 * 10)
