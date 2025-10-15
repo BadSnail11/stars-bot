@@ -20,6 +20,17 @@ class PricingRepo:
             .order_by(PricingRule.created_at.desc())
         )
         return q.scalars().first()
+    
+    async def get_active_dynamic(self, item_type: str, currency: str, bot_id: int) -> Optional[PricingRule]:
+        q = await self.s.execute(select(PricingRule).where(
+            PricingRule.item_type == item_type,
+            PricingRule.mode == "dynamic", # выставляется автоматически
+            PricingRule.currency == currency,
+            PricingRule.is_active == True,  # noqa: E712,
+            PricingRule.bot_id == bot_id
+        ).order_by(PricingRule.id.desc()))
+        # res = await self.session.execute(q)
+        return q.scalars().first()
 
     async def upsert_manual(self, item_type: str, currency: str, price: float, bot_id: int):
         await self.s.execute(
@@ -35,3 +46,8 @@ class PricingRepo:
             update(PricingRule).where(PricingRule.bot_id == bot_id, PricingRule.currency == currency, PricingRule.item_type == item_type).values(manual_price=price)
         )
         await self.s.commit()
+
+    async def set_active_markup(self, item_type: str, currency: str, bot_id: int, markup: float):
+        if await self.get_active_dynamic(item_type=item_type, currency=currency, bot_id=bot_id):
+            q = update(PricingRule).where(PricingRule.item_type == item_type, PricingRule.currency == currency, PricingRule.bot_id==bot_id).values(markup_percent=markup)
+            await self.s.execute(q)

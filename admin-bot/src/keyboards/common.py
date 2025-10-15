@@ -20,13 +20,21 @@ def nav_to_menu():
 def pricing_kb():
     kb = InlineKeyboardBuilder()
     kb.row(types.InlineKeyboardButton(text="Изменить цены", callback_data="change_pricing"))
+    kb.row(types.InlineKeyboardButton(text="Изменить наценки (TON)", callback_data="change_markup"))
     kb.row(types.InlineKeyboardButton(text="Назад", callback_data="back"))
     return kb.as_markup()
 
 def product_kb():
     kb = InlineKeyboardBuilder()
-    kb.row(types.InlineKeyboardButton(text="Звезды", callback_data="change_stars"))
-    kb.row(types.InlineKeyboardButton(text="Премиум", callback_data="change_premium"))
+    kb.row(types.InlineKeyboardButton(text="Звезды", callback_data="change_stars_pricing"))
+    kb.row(types.InlineKeyboardButton(text="Премиум", callback_data="change_premium_pricing"))
+    kb.row(types.InlineKeyboardButton(text="Назад", callback_data="back"))
+    return kb.as_markup()
+
+def product_markup_kb():
+    kb = InlineKeyboardBuilder()
+    kb.row(types.InlineKeyboardButton(text="Звезды", callback_data="change_stars_markup"))
+    kb.row(types.InlineKeyboardButton(text="Премиум", callback_data="change_premium_markup"))
     kb.row(types.InlineKeyboardButton(text="Назад", callback_data="back"))
     return kb.as_markup()
 

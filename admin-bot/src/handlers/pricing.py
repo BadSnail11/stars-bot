@@ -13,6 +13,8 @@ router = Router(name="pricing")
 class PricingStates(StatesGroup):
     waiting_stars_price = State()
     waiting_premium_price = State()
+    waiting_stars_markup = State()
+    waiting_premium_markup = State()
 
 # PRICE_RE = r"^\d+(?:[.,]\d+)?$"
 PRICE_RE = r"^\d+\.\d*$"
@@ -21,11 +23,15 @@ async def _render_prices(m: types.Message, s, bot_key: int, edit: bool = False):
     repo = PricingRepo(s)
     stars = await repo.get_active_manual("stars", "RUB", bot_key)
     prem  = await repo.get_active_manual("premium", "RUB", bot_key)
+    stars_m = await repo.get_active_dynamic("stars", "TON", bot_key)
+    prem_m = await repo.get_active_dynamic("premium", "TON", bot_key)
     if edit:
         await m.edit_text(
             "Текущие manual-цены (RUB):\n"
             f"• звезда: {stars.manual_price if stars else '—'}\n"
-            f"• премиум/мес: {prem.manual_price if prem else '—'}\n\n",
+            f"• премиум/мес: {prem.manual_price if prem else '—'}\n\n"
+            f"• звезда (наценка TON): {stars_m.manual_price if stars else '—'}\n"
+            f"• премиум/мес (наценка TON): {prem_m.manual_price if prem else '—'}\n\n",
             parse_mode="HTML",
             reply_markup=pricing_kb()
         )
@@ -39,7 +45,7 @@ async def _render_prices(m: types.Message, s, bot_key: int, edit: bool = False):
         )
 
 @router.callback_query(F.data == ("pricing"))
-async def pricing_enter(cb: types.CallbackQuery, state: FSMContext):
+async def pricing_main(cb: types.CallbackQuery, state: FSMContext):
     m = cb.message
     async with SessionLocal() as s:
         _, bot_key = await resolve_owner_and_bot_key(s, m.chat.id)
@@ -50,7 +56,7 @@ async def pricing_enter(cb: types.CallbackQuery, state: FSMContext):
     # await state.set_state(PricingStates.waiting_price)
 
 @router.callback_query(F.data == ("change_pricing"))
-async def pricing_enter(cb: types.CallbackQuery, state: FSMContext):
+async def pricing_change(cb: types.CallbackQuery, state: FSMContext):
     m = cb.message
     async with SessionLocal() as s:
         _, bot_key = await resolve_owner_and_bot_key(s, m.chat.id)
@@ -60,8 +66,8 @@ async def pricing_enter(cb: types.CallbackQuery, state: FSMContext):
         await m.edit_text(text="Выберите продукт для изменения цены:", reply_markup=product_kb())
     # await state.set_state(PricingStates.waiting_price)
 
-@router.callback_query(F.data == ("change_stars"))
-async def pricing_enter(cb: types.CallbackQuery, state: FSMContext):
+@router.callback_query(F.data == ("change_stars_pricing"))
+async def pricing_stars_change(cb: types.CallbackQuery, state: FSMContext):
     m = cb.message
     async with SessionLocal() as s:
         _, bot_key = await resolve_owner_and_bot_key(s, m.chat.id)
@@ -71,7 +77,7 @@ async def pricing_enter(cb: types.CallbackQuery, state: FSMContext):
         await m.edit_text(text="Введите новую цену для звезд:", reply_markup=nav_to_menu())
     await state.set_state(PricingStates.waiting_stars_price)
 
-@router.callback_query(F.data == ("change_premium"))
+@router.callback_query(F.data == ("change_premium_pricing"))
 async def pricing_enter(cb: types.CallbackQuery, state: FSMContext):
     m = cb.message
     async with SessionLocal() as s:
@@ -83,7 +89,7 @@ async def pricing_enter(cb: types.CallbackQuery, state: FSMContext):
     await state.set_state(PricingStates.waiting_premium_price)
 
 @router.message(PricingStates.waiting_stars_price)
-async def pricing_set(m: types.Message, state: FSMContext):
+async def pricing_set_stars(m: types.Message, state: FSMContext):
     try:
         price = float(m.text.replace(",", "."))
     except:
@@ -105,7 +111,7 @@ async def pricing_set(m: types.Message, state: FSMContext):
     await state.clear()
 
 @router.message(PricingStates.waiting_premium_price)
-async def pricing_set(m: types.Message, state: FSMContext):
+async def pricing_set_premium(m: types.Message, state: FSMContext):
     try:
         price = float(m.text.replace(",", "."))
     except:
@@ -123,5 +129,74 @@ async def pricing_set(m: types.Message, state: FSMContext):
         else:
             await repo.upsert_manual("premium", "RUB", price, bot_key)
         # await m.edit_text("Сохранено.", reply_markup=nav_to_menu())
+        await _render_prices(m, s, bot_key)
+    await state.clear()
+
+######################################
+
+@router.callback_query(F.data == ("change_markup"))
+async def pricing_change(cb: types.CallbackQuery, state: FSMContext):
+    m = cb.message
+    async with SessionLocal() as s:
+        _, bot_key = await resolve_owner_and_bot_key(s, m.chat.id)
+        # if not bot_key:
+        #     await m.edit_text("Зеркальный бот не найден.", reply_markup=)
+        #     return
+        await m.edit_text(text="Выберите продукт для изменения наценки (TON):", reply_markup=product_kb())
+    # await state.set_state(PricingStates.waiting_price)
+
+@router.callback_query(F.data == ("change_stars_markup"))
+async def pricing_stars_change(cb: types.CallbackQuery, state: FSMContext):
+    m = cb.message
+    async with SessionLocal() as s:
+        _, bot_key = await resolve_owner_and_bot_key(s, m.chat.id)
+        # if not bot_key:
+        #     await m.edit_text("Зеркальный бот не найден.", reply_markup=)
+        #     return
+        await m.edit_text(text="Введите новую наценку % для звезд:", reply_markup=nav_to_menu())
+    await state.set_state(PricingStates.waiting_stars_markup)
+
+@router.callback_query(F.data == ("change_premium_markup"))
+async def pricing_enter(cb: types.CallbackQuery, state: FSMContext):
+    m = cb.message
+    async with SessionLocal() as s:
+        _, bot_key = await resolve_owner_and_bot_key(s, m.chat.id)
+        # if not bot_key:
+        #     await m.edit_text("Зеркальный бот не найден.", reply_markup=)
+        #     return
+        await m.edit_text(text="Введите новую наценку % для премиума:", reply_markup=nav_to_menu())
+    await state.set_state(PricingStates.waiting_premium_markup)
+
+@router.message(PricingStates.waiting_stars_markup)
+async def pricing_set_stars(m: types.Message, state: FSMContext):
+    try:
+        markup = float(m.text.replace(",", "."))
+    except:
+        m.edit_text("Неправильный ввод, попробуйте еще раз:", nav_to_menu())
+    # price = float(price_s.replace(",", "."))
+    async with SessionLocal() as s:
+        _, bot_key = await resolve_owner_and_bot_key(s, m.chat.id)
+        # if not bot_key:
+        #     await m.answer("Зеркальный бот не найден.")
+        #     return
+        repo = PricingRepo(s)
+        await repo.set_active_markup("stars", "TON", bot_key, markup)
+        await _render_prices(m, s, bot_key)
+    await state.clear()
+
+@router.message(PricingStates.waiting_premium_markup)
+async def pricing_set_premium(m: types.Message, state: FSMContext):
+    try:
+        markup = float(m.text.replace(",", "."))
+    except:
+        m.edit_text("Неправильный ввод, попробуйте еще раз:", nav_to_menu())
+    # price = float(price_s.replace(",", "."))
+    async with SessionLocal() as s:
+        _, bot_key = await resolve_owner_and_bot_key(s, m.chat.id)
+        # if not bot_key:
+        #     await m.answer("Зеркальный бот не найден.")
+        #     return
+        repo = PricingRepo(s)
+        await repo.set_active_markup("premium", "TON", bot_key, markup)
         await _render_prices(m, s, bot_key)
     await state.clear()
