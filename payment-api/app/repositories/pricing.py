@@ -35,7 +35,7 @@ class PricingRepo:
             if markup:
                 q = update(PricingRule).where(PricingRule.item_type == item_type, PricingRule.currency == currency, PricingRule.bot_id==bot_id).values(manual_price=price, markup_percent=markup)
             else:
-                update(PricingRule).where(PricingRule.item_type == item_type, PricingRule.currency == currency, PricingRule.bot_id==bot_id).values(manual_price=price)
+                q = update(PricingRule).where(PricingRule.item_type == item_type, PricingRule.currency == currency, PricingRule.bot_id==bot_id).values(manual_price=price)
         else:
             if not markup:
                 markup = float(os.getenv("REFERRAL_PERCENT", "5.0"))
