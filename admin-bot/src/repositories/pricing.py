@@ -51,3 +51,4 @@ class PricingRepo:
         if await self.get_active_dynamic(item_type=item_type, currency=currency, bot_id=bot_id):
             q = update(PricingRule).where(PricingRule.item_type == item_type, PricingRule.currency == currency, PricingRule.bot_id==bot_id).values(markup_percent=markup)
             await self.s.execute(q)
+        await self.s.commit()
