@@ -40,13 +40,14 @@ def get_router(session_maker: async_sessionmaker) -> Router:
                 await m.answer(
                     "У вас уже есть активное зеркало:\n"
                     f"<b>@{existing.bot_username}</b>\n\n"
-                    "Пока можно создать только одно зеркало."
+                    "Пока можно создать только одно зеркало.",
+                    reply_markup=back_nav_kb()
                 )
                 return
 
         await state.set_state(MirrorStates.waiting_token)
         await m.edit_text(
-            "Пришлите токен вашего бота (BotFather). "
+            "Пришлите токен вашего бота (@BotFather). "
             "Формат вроде <code>1234567890:AA...ZZ</code>.\n"
             "⚠️ Не публикуйте его в открытых чатах.", reply_markup=back_nav_kb()
         )
@@ -55,7 +56,7 @@ def get_router(session_maker: async_sessionmaker) -> Router:
     async def receive_token(m: types.Message, state: FSMContext, dp_for_new_bot: Dispatcher, polling_manager: PollingManager):
         token = (m.text or "").strip()
         if not TOKEN_RE.match(token):
-            await m.answer("Похоже, это не токен. Проверьте и пришлите снова.")
+            await m.answer("Похоже, это не токен. Проверьте и пришлите снова.", reply_markup=back_nav_kb())
             return
 
         # валидируем токен через getMe
@@ -63,7 +64,7 @@ def get_router(session_maker: async_sessionmaker) -> Router:
         try:
             me = await test_bot.get_me()
         except Exception as e:
-            await m.answer(f"Не получилось подключиться: <code>{e}</code>")
+            await m.answer(f"Не получилось подключиться: <code>{e}</code>", reply_markup=back_nav_kb())
             await test_bot.session.close()
             return
 
@@ -83,7 +84,8 @@ def get_router(session_maker: async_sessionmaker) -> Router:
             existing = await bots.get_by_owner(u.id)
             if existing and existing.is_active:
                 await m.answer(
-                    "У вас уже есть активное зеркало. Сейчас можно только одно."
+                    "У вас уже есть активное зеркало. Сейчас можно только одно.",
+                    reply_markup=back_nav_kb()
                 )
                 await state.clear()
                 return
@@ -98,7 +100,8 @@ def get_router(session_maker: async_sessionmaker) -> Router:
         
         polling_manager.start_bot_polling(dp=dp_for_new_bot, bot=bot, dp_for_new_bot=dp_for_new_bot, polling_manager=polling_manager)
         
-        await m.answer(f"Готово! Зеркало @{bot_username} запущено.")
+        await m.answer(f"Готово! Зеркало @{bot_username} запущено.\n"
+                       "Администрируйте своего бота в @stars_admin_frag_bot", reply_markup=back_nav_kb())
 
 
         # по желанию удалим исходное сообщение с токеном (без паники, если нельзя)

@@ -92,10 +92,10 @@ def get_router(session_maker: async_sessionmaker) -> Router:
     async def _start_polling(cb: types.CallbackQuery, order_id: int):
         async def _on_paid(data: dict):
             msg = data.get("message") or "Оплата подтверждена."
-            await cb.message.answer(f"✅ Заказ №{order_id} завершён!\n{msg}")
+            await cb.message.answer(f"✅ Заказ №{order_id} завершён!\n{msg}", reply_markup=back_nav_kb())
 
         async def _on_timeout():
-            await cb.message.answer(f"⏳ Заказ №{order_id}: время ожидания истекло.")
+            await cb.message.answer(f"⏳ Заказ №{order_id}: время ожидания истекло.", reply_markup=back_nav_kb())
 
         asyncio.create_task(poll_until_paid(order_id, on_paid=_on_paid, on_timeout=_on_timeout))
 
@@ -128,11 +128,14 @@ def get_router(session_maker: async_sessionmaker) -> Router:
 
         await state.clear()
         await cb.message.edit_text(
-            f"Заказ №{order_id}: {qty} ⭐"
             "💎 Платёж (TON)\n"
-            f"➤ Адрес: <code>{address}</code>\n"
-            f"➤ Сумма: <b>{amount_ton}</b> TON\n"
-            f"➤ Комментарий (TAG/MEMO): <code>{memo}</code>\n\n",
+            f"Заказ №{order_id}: {qty} ⭐\n\n"
+            f"Переведите <code>{amount_ton}</code> TON на адрес:\n"
+            f"<code>{address}</code>\n\n"
+            f"❗️ Обязательно укажите комментарий (TAG/MEMO):\n"
+            f"<code>{memo}</code>\n\n"
+            f"Если вы не укажите комментарий - ваш депозит не будет зачислен\n\n"
+            f"Счет для оплаты действителен _ минут",
             reply_markup=payment_kb(link)
         )
         await _start_polling(cb, order_id)
@@ -144,7 +147,7 @@ def get_router(session_maker: async_sessionmaker) -> Router:
         qty = data.get("qty")
         recipient = data.get("recipient")
         if not qty:
-            await cb.message.answer("Не вижу количество. Начните заново: «⭐ Купить звёзды».")
+            await cb.message.answer("Не вижу количество. Начните заново: «⭐ Купить звёзды»")
             await state.clear()
             return
 
@@ -164,10 +167,12 @@ def get_router(session_maker: async_sessionmaker) -> Router:
 
         await state.clear()
         await cb.message.edit_text(
-            "🏦 СБП — платёж создан.\n"
-            f"Заказ №{order_id}: {qty} ⭐ на {amount_rub} RUB\n"
-            # f"Ссылка на оплату: {redirect}\n\n"
-            "Оплатите в течение 15 минут.",
+            "🏦 Платёж СБП\n"
+            f"Заказ №{order_id}: {qty} ⭐\n\n"
+            "Нажмите на копку <b>Оплатить</b> для перехода к оплате\n\n"
+            "Либо перейдите по ссылке:\n"
+            f"<code>{redirect}</code>\n\n"
+            "Счет для оплаты действителен _ минут",
             reply_markup=payment_kb(redirect)
         )
         await _start_polling(cb, order_id)
@@ -196,7 +201,13 @@ def get_router(session_maker: async_sessionmaker) -> Router:
         # msg = resp.get("message") or "Счёт Heleket создан. Перейдите по ссылке на странице оплаты."
 
         await state.clear()
-        await cb.message.edit_text(f"🪙 Heleket\nЗаказ №{order_id}: {qty} ⭐", reply_markup=payment_kb(url))
+        await cb.message.edit_text(f"🪙 Платёж Heleket\n"
+                                    f"Заказ №{order_id}: {qty} ⭐\n\n"
+                                    "Нажмите на копку <b>Оплатить</b> для перехода к оплате\n\n"
+                                    "Либо перейдите по ссылке:\n"
+                                    f"<code>{url}</code>\n\n"
+                                    "Счет для оплаты действителен _ минут",
+                                    reply_markup=payment_kb(url))
         # Если хочешь показать URL сразу здесь — расширь ответ Payment API (добавь поле heleket.url)
         await _start_polling(cb, order_id)
         

@@ -42,9 +42,9 @@ def main_menu_kb() -> types.InlineKeyboardMarkup:
 
 def who_kb(self_cb: str, gift_cb: str, cancel_cb: str):
     kb = InlineKeyboardBuilder()
-    kb.button(text="🎯 Себе", callback_data=self_cb)
-    kb.button(text="🎁 Подарок", callback_data=gift_cb)
-    kb.button(text="Отмена", callback_data=cancel_cb)
+    kb.row(types.InlineKeyboardButton(text="🎯 Себе", callback_data=self_cb))
+    kb.row(types.InlineKeyboardButton(text="🎁 Подарок", callback_data=gift_cb))
+    kb.row(types.InlineKeyboardButton(text="Отмена", callback_data=cancel_cb))
     return kb.as_markup()
 
 def cancel_kb(cancel_cb: str):
@@ -54,18 +54,18 @@ def cancel_kb(cancel_cb: str):
 
 def payment_methods_kb(sbp_cb: str, ton_cb: str, other_cb: str, cancel_cb: str):
     kb = InlineKeyboardBuilder()
-    kb.button(text="🏦 СБП", callback_data=sbp_cb)
-    kb.button(text="💎 TON", callback_data=ton_cb)
-    kb.button(text="🪙 Другая крипта", callback_data=other_cb)
-    kb.button(text="Отмена", callback_data=cancel_cb)
+    kb.row(types.InlineKeyboardButton(text="🏦 СБП", callback_data=sbp_cb))
+    kb.row(types.InlineKeyboardButton(text="💎 TON", callback_data=ton_cb))
+    kb.row(types.InlineKeyboardButton(text="🪙 Другая крипта", callback_data=other_cb))
+    kb.row(types.InlineKeyboardButton(text="Отмена", callback_data=cancel_cb))
     return kb.as_markup()
 
 def premium_duration_kb(m3_cb: str, m6_cb: str, m12_cb: str, cancel_cb: str):
     kb = InlineKeyboardBuilder()
-    kb.button(text="3 мес",  callback_data=m3_cb)
-    kb.button(text="6 мес",  callback_data=m6_cb)
-    kb.button(text="12 мес", callback_data=m12_cb)
-    kb.button(text="Отмена", callback_data=cancel_cb)
+    kb.row(types.InlineKeyboardButton(text="3 мес",  callback_data=m3_cb))
+    kb.row(types.InlineKeyboardButton(text="6 мес",  callback_data=m6_cb))
+    kb.row(types.InlineKeyboardButton(text="12 мес", callback_data=m12_cb))
+    kb.row(types.InlineKeyboardButton(text="Отмена", callback_data=cancel_cb))
     return kb.as_markup()
 
 
