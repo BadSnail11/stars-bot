@@ -137,7 +137,7 @@ async def create_order(payload: CreateOrderRequest):
                 })
 
                 # запустим фоновый пуллинг статуса (если не пользуешься вебхуком)
-                asyncio.create_task(_background_heleket_check(order.id))
+                asyncio.create_task(_background_heleket_check(order.id, user.tg_user_id))
 
                 return CreateOrderResponse(
                     order_id=order.id,
@@ -237,7 +237,7 @@ async def create_order(payload: CreateOrderRequest):
                     }
                 })
 
-                asyncio.create_task(_background_heleket_check(order.id))
+                asyncio.create_task(_background_heleket_check(order.id, user.tg_user_id))
 
                 return CreateOrderResponse(
                     order_id=order.id,
@@ -294,8 +294,8 @@ async def _background_sbp_check(order_id: int, tx_id: str):
         await _on_paid(order_id, status_tx)
 
 
-async def _background_heleket_check(order_id: int):
-    res = await wait_invoice_paid(order_id=str(order_id), poll_interval=10)
+async def _background_heleket_check(order_id: int, user_tg_id: int):
+    res = await wait_invoice_paid(order_id=str(order_id), user_tg_id=str(user_tg_id), poll_interval=10)
     if res:
         await _on_paid(order_id, res.get("txid"))
 

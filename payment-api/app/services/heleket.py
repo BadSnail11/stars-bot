@@ -95,14 +95,14 @@ def is_paid_status(status: str) -> bool:
     # Статусы по докам: paid, paid_over — считаем как успешную оплату
     return (status or "").lower() in {"paid", "paid_over"}
 
-async def wait_invoice_paid(order_id: str, *, poll_interval: float = 10.0, timeout: float = 900.0) -> Optional[dict]:
+async def wait_invoice_paid(order_id: str, user_tg_id, *, poll_interval: float = 10.0, timeout: float = 900.0) -> Optional[dict]:
     """
     Пуллинг статуса до paid/paid_over/исчерпания таймаута.
     Возвращает объект платежа (result) если оплачен, иначе None.
     """
     deadline = asyncio.get_event_loop().time() + timeout
     while asyncio.get_event_loop().time() < deadline:
-        info = await get_payment_info(order_id=order_id)
+        info = await get_payment_info(order_id=order_id, user_tg_id=user_tg_id)
         # success response: {"state":0, "result": {..., "status": "..."}}
         if info.get("state") == 0:
             res = info.get("result") or {}
