@@ -42,7 +42,7 @@ class PricingRepo:
             q = insert(PricingRule).values(
                 item_type=item_type,
                 mode="dynamic",
-                murkup_percent=markup,
+                markup_percent=markup,
                 currency=currency,
                 is_active=True,
                 manual_price=price, 
