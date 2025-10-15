@@ -121,7 +121,7 @@ class OrdersRepo:
         )
         await self.session.commit()
 
-    async def change_memo(self, order_id: int, type: str, amount: float, price: float, memo: str, wallet: str, recipient: str | None):
+    async def change_memo(self, order_id: int, type: str, amount: float, memo: str, wallet: str, recipient: str | None):
         payload = {"wallet": wallet, "memo": memo, "network": "TON", "type": type, "amount": amount, "recipient": recipient}
         q = (
             update(Order).where(Order.id==order_id).values(gateway_payload=payload)
