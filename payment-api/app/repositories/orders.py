@@ -123,7 +123,14 @@ class OrdersRepo:
 
     async def change_memo(self, order_id: int, memo: str):
         q = (
-            update(Order).where(Order.id==order_id).values(memo=memo)
+            select(Order).where(Order.id==order_id)
+        )
+        res = await self.session.execute(q)
+        order = res.scalar_one()
+        payload = order.gateway_payload
+        payload["memo"] = memo
+        q = (
+            update(Order).where(Order.id==order_id).values(gateway_payload=payload)
         )
         await self.session.execute(q)
 
