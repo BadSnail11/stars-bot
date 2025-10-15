@@ -218,7 +218,7 @@ async def create_order(payload: CreateOrderRequest):
                     currency="RUB",
                     order_id=str(order.id),
                     to_currency="USDT",
-                    user_tg_id=user.tg_user_id
+                    user_tg_id=user.tg_user_id,
                     # network=os.getenv("HELEKET_PAYER_NETWORK","tron"),
                     # url_return=os.getenv("HELEKET_RETURN_URL"),
                     # url_success=os.getenv("HELEKET_SUCCESS_URL"),
