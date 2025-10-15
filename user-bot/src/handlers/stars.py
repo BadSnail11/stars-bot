@@ -97,7 +97,7 @@ def get_router(session_maker: async_sessionmaker) -> Router:
         async def _on_timeout():
             await cb.message.answer(f"⏳ Заказ №{order_id}: время ожидания истекло.", reply_markup=back_nav_kb())
 
-        asyncio.create_task(poll_until_paid(order_id, on_paid=_on_paid, on_timeout=_on_timeout))
+        asyncio.create_task(poll_until_paid(order_id, on_paid=_on_paid, on_timeout=_on_timeout, interval_sec=15, timeout_sec=30 * 60))
 
     @router.callback_query(F.data == BTN_PAY_TON)
     async def pay_ton(cb: types.CallbackQuery, state: FSMContext):
@@ -135,7 +135,7 @@ def get_router(session_maker: async_sessionmaker) -> Router:
             f"❗️ Обязательно укажите комментарий (TAG/MEMO):\n"
             f"<code>{memo}</code>\n\n"
             f"Если вы не укажите комментарий - ваш депозит не будет зачислен\n\n"
-            f"Счет для оплаты действителен 15 минут",
+            f"Счет для оплаты действителен 30 минут",
             reply_markup=payment_kb(link)
         )
         await _start_polling(cb, order_id)
@@ -172,7 +172,7 @@ def get_router(session_maker: async_sessionmaker) -> Router:
             "Нажмите на копку <b>Оплатить</b> для перехода к оплате\n\n"
             "Либо перейдите по ссылке:\n"
             f"<code>{redirect}</code>\n\n"
-            "Счет для оплаты действителен 15 минут",
+            "Счет для оплаты действителен 30 минут",
             reply_markup=payment_kb(redirect)
         )
         await _start_polling(cb, order_id)
@@ -206,7 +206,7 @@ def get_router(session_maker: async_sessionmaker) -> Router:
                                     "Нажмите на копку <b>Оплатить</b> для перехода к оплате\n\n"
                                     "Либо перейдите по ссылке:\n"
                                     f"<code>{url}</code>\n\n"
-                                    "Счет для оплаты действителен 15 минут",
+                                    "Счет для оплаты действителен 30 минут",
                                     reply_markup=payment_kb(url))
         # Если хочешь показать URL сразу здесь — расширь ответ Payment API (добавь поле heleket.url)
         await _start_polling(cb, order_id)
