@@ -63,7 +63,7 @@ async def create_order(payload: CreateOrderRequest):
                 )
                 order_id = str(order.id)
                 memo = generate_memo(os.getenv('TON_MEMO_PREFIX','INV-'), order_id, str(user.tg_user_id))
-                await orders.change_memo(order.id, memo)
+                await orders.change_memo(order.id, payload.order_type, qty, float(total_ton), memo, wallet, payload.recipient)
                 # запустим фоновую проверку TON
                 asyncio.create_task(_background_ton_check(order.id, wallet, memo, total_ton))
                 return CreateOrderResponse(
@@ -172,7 +172,7 @@ async def create_order(payload: CreateOrderRequest):
                 )
                 order_id = str(order.id)
                 memo = generate_memo(os.getenv('TON_MEMO_PREFIX','INV-'), order_id, str(user.tg_user_id))
-                await orders.change_memo(order.id, memo)
+                await orders.change_memo(order.id, payload.order_type, months, float(total_ton), memo, wallet, payload.recipient)
                 asyncio.create_task(_background_ton_check(order.id, wallet, memo, total_ton))
                 return CreateOrderResponse(
                     order_id=order.id, status=order.status,
