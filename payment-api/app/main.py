@@ -1,6 +1,6 @@
 import uvicorn
 from fastapi import FastAPI
-from .routers import orders
+from .routers import orders, withdrawals
 from contextlib import asynccontextmanager
 from .redis import get_redis, close_redis
 
@@ -14,6 +14,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Payment API", lifespan=lifespan)
 app.include_router(orders.router)
+app.include_router(withdrawals.router)
 # app.include_router(callbacks.router)  # если используешь вебхуки
 
 if __name__ == "__main__":

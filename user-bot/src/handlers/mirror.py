@@ -28,7 +28,10 @@ def get_router(session_maker: async_sessionmaker) -> Router:
         m = cb.message
         async with session_maker() as session:
             users = UsersRepo(session)
-            me = await users.upsert_from_telegram(m.from_user)
+            userbots = UserBotsRepo(session)
+
+            bot = await userbots.get_by_tg_bot_id(cb.bot.id)
+            me = await users.upsert_from_telegram(m.from_user, bot.id)
 
             bots = UserBotsRepo(session)
             existing = await bots.get_by_owner(me.id)
@@ -71,7 +74,10 @@ def get_router(session_maker: async_sessionmaker) -> Router:
         # сохраняем в БД и запускаем зеркало
         async with session_maker() as session:
             users = UsersRepo(session)
-            u = await users.upsert_from_telegram(m.from_user)
+            userbots = UserBotsRepo(session)
+
+            bot = await userbots.get_by_tg_bot_id(m.bot.id)
+            u = await users.upsert_from_telegram(m.from_user, bot.id)
 
             bots = UserBotsRepo(session)
             existing = await bots.get_by_owner(u.id)

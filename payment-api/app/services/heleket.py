@@ -1,12 +1,15 @@
 # app/services/heleket.py
 import os, json, base64, hashlib, aiohttp, asyncio
 from typing import Optional, Tuple
+from decimal import Decimal
+from typing import Dict, Any
 
 HELEKET_BASE = os.getenv("HELEKET_BASE", "https://api.heleket.com")
 MERCHANT = os.getenv("HELEKET_MERCHANT_UUID", "")
 PAYMENT_KEY = os.getenv("HELEKET_PAYMENT_API_KEY", "")
+PAYOUT_KEY = os.getenv("HELEKET_PAYOUT_API_KEY", "")
 
-def _sign_payload(payload_obj: dict) -> str:
+def _sign_payload(payload_obj: dict, is_payout: bool = False) -> str:
     # md5(base64(json) + API_KEY)
     # raw = json.dumps(payload_obj, ensure_ascii=False, separators=(",", ":"))
     # b64 = base64.b64encode(raw.encode("utf-8")).decode("ascii")
@@ -17,15 +20,17 @@ def _sign_payload(payload_obj: dict) -> str:
     # Кодируем данные в base64
     encoded_data = base64.b64encode(data.encode('utf-8')).decode('utf-8')
 
+    key = PAYOUT_KEY if is_payout else PAYMENT_KEY
+
     # Создаем подпись MD5
-    sign = hashlib.md5(f"{encoded_data}{PAYMENT_KEY}".encode('utf-8')).hexdigest()
+    sign = hashlib.md5(f"{encoded_data}{key}".encode('utf-8')).hexdigest()
     return sign
 
-async def _post_json(path: str, payload: dict) -> dict:
+async def _post_json(path: str, payload: dict, is_payout: bool = False) -> dict:
     url = f"{HELEKET_BASE}{path}"
     headers = {
         "merchant": MERCHANT,
-        "sign": _sign_payload(payload),
+        "sign": _sign_payload(payload, is_payout),
         "Content-Type": "application/json",
     }
     async with aiohttp.ClientSession() as http:
@@ -104,3 +109,17 @@ async def wait_invoice_paid(order_id: str, *, poll_interval: float = 5.0, timeou
             if st in {"cancel", "fail", "system_fail"} or res.get("is_final") is True:
                 await asyncio.sleep(poll_interval)
     return None
+
+
+async def create_withdraw(order_id: str, to_address: str, amount: str) -> dict:
+    """
+    Создать выплату. Возвращает (provider_id, payload).
+    """
+    body = {"currency": "USDT",
+            "amount": amount,
+            "order_id": order_id,
+            "address": to_address,
+            "is_subtract": False,
+            "network": "TRON"
+        }
+    return await _post_json("/v1/payout", body, True)

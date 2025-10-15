@@ -83,4 +83,18 @@ CREATE TABLE IF NOT EXISTS referrals (
   created_at  TIMESTAMP DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS withdrawals (
+  id            BIGSERIAL PRIMARY KEY,
+  user_id       BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  amount        DECIMAL(18,6) NOT NULL,      -- сколько уходит пользователю (в TON)
+  currency      VARCHAR(8) DEFAULT 'USDT',
+  to_address    TEXT NOT NULL,
+  status        VARCHAR(32) NOT NULL DEFAULT 'pending', -- pending/processing/sent/failed/canceled
+  provider_id   TEXT,                         -- id выплаты в Heleket
+  provider_payload JSONB,                     -- сырые ответы
+  created_at    TIMESTAMP DEFAULT NOW(),
+  processed_at  TIMESTAMP
+);
+
+
 
