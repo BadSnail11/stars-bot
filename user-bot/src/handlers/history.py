@@ -42,7 +42,7 @@ def get_router(session_maker: async_sessionmaker) -> Router:
             orders = OrdersRepo(session)
             userbots = UserBotsRepo(session)
 
-            bot = await userbots.get_by_tg_bot_id(cb.bot.id)
+            bot = await userbots.get_by_tg_bot_id(m.bot.id)
             user = await users.upsert_from_telegram(user_tg, bot.id)
             total = await orders.count_paid_by_user(user.id)
             rows = await orders.list_paid_by_user(user.id, limit=PAGE_SIZE, offset=offset)
