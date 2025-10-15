@@ -16,8 +16,8 @@ services:
     ports:
       - "6379:6379"
 
-  payment-bot:
-    container_name: payment-api
+  payment:
+    container_name: payment
     build: .
     restart: unless-stopped
     ports:

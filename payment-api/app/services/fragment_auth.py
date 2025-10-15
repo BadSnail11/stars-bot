@@ -113,12 +113,12 @@ class FragmentAuth:
         await redis.set(REDIS_CHECK_KEY, token, ex=_TTL_SECONDS)
 
     async def get_auth_header(self) -> Dict[str, str]:
-        if not self._is_valid():
+        if not self._token:
             await self._fetch_token()
         return {"Authorization": f"JWT {self._token}"}
     
     async def get_auth_check_header(self) -> Dict[str, str]:
-        if not self._is_valid():
+        if not self._check_token:
             await self._fetch_check_token()
         return {"Authorization": f"JWT {self._token}"}
     
