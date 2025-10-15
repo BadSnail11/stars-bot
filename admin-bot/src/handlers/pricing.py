@@ -39,7 +39,9 @@ async def _render_prices(m: types.Message, s, bot_key: int, edit: bool = False):
         await m.answer(
             "Текущие manual-цены (RUB):\n"
             f"• звезда: {stars.manual_price if stars else '—'}\n"
-            f"• премиум/мес: {prem.manual_price if prem else '—'}\n\n",
+            f"• премиум/мес: {prem.manual_price if prem else '—'}\n\n"
+            f"• звезда (наценка TON): {stars_m.manual_price if stars else '—'}\n"
+            f"• премиум/мес (наценка TON): {prem_m.manual_price if prem else '—'}\n\n",
             parse_mode="HTML",
             reply_markup=pricing_kb()
         )
@@ -146,7 +148,7 @@ async def pricing_change(cb: types.CallbackQuery, state: FSMContext):
     # await state.set_state(PricingStates.waiting_price)
 
 @router.callback_query(F.data == ("change_stars_markup"))
-async def pricing_stars_change(cb: types.CallbackQuery, state: FSMContext):
+async def markup_stars_change(cb: types.CallbackQuery, state: FSMContext):
     m = cb.message
     async with SessionLocal() as s:
         _, bot_key = await resolve_owner_and_bot_key(s, m.chat.id)
@@ -157,7 +159,7 @@ async def pricing_stars_change(cb: types.CallbackQuery, state: FSMContext):
     await state.set_state(PricingStates.waiting_stars_markup)
 
 @router.callback_query(F.data == ("change_premium_markup"))
-async def pricing_enter(cb: types.CallbackQuery, state: FSMContext):
+async def markup_enter(cb: types.CallbackQuery, state: FSMContext):
     m = cb.message
     async with SessionLocal() as s:
         _, bot_key = await resolve_owner_and_bot_key(s, m.chat.id)
@@ -168,7 +170,7 @@ async def pricing_enter(cb: types.CallbackQuery, state: FSMContext):
     await state.set_state(PricingStates.waiting_premium_markup)
 
 @router.message(PricingStates.waiting_stars_markup)
-async def pricing_set_stars(m: types.Message, state: FSMContext):
+async def markup_set_stars(m: types.Message, state: FSMContext):
     try:
         markup = float(m.text.replace(",", "."))
     except:
@@ -185,7 +187,7 @@ async def pricing_set_stars(m: types.Message, state: FSMContext):
     await state.clear()
 
 @router.message(PricingStates.waiting_premium_markup)
-async def pricing_set_premium(m: types.Message, state: FSMContext):
+async def markup_set_premium(m: types.Message, state: FSMContext):
     try:
         markup = float(m.text.replace(",", "."))
     except:
