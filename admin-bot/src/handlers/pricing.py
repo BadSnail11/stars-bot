@@ -6,7 +6,7 @@ from src.db import SessionLocal
 from src.repositories.pricing import PricingRepo
 from src.utils.owner_scope import resolve_owner_and_bot_key
 
-from ..keyboards.common import pricing_kb, nav_to_menu, product_kb
+from ..keyboards.common import pricing_kb, nav_to_menu, product_kb, product_markup_kb
 
 router = Router(name="pricing")
 
@@ -30,8 +30,8 @@ async def _render_prices(m: types.Message, s, bot_key: int, edit: bool = False):
             "Текущие manual-цены (RUB):\n"
             f"• звезда: {stars.manual_price if stars else '—'}\n"
             f"• премиум/мес: {prem.manual_price if prem else '—'}\n\n"
-            f"• звезда (наценка TON): {stars_m.manual_price if stars else '—'}\n"
-            f"• премиум/мес (наценка TON): {prem_m.manual_price if prem else '—'}\n\n",
+            f"• звезда (наценка TON): {stars_m.markup_percent if stars else '—'}%\n"
+            f"• премиум/мес (наценка TON): {prem_m.markup_percent if prem else '—'}%\n\n",
             parse_mode="HTML",
             reply_markup=pricing_kb()
         )
@@ -40,8 +40,8 @@ async def _render_prices(m: types.Message, s, bot_key: int, edit: bool = False):
             "Текущие manual-цены (RUB):\n"
             f"• звезда: {stars.manual_price if stars else '—'}\n"
             f"• премиум/мес: {prem.manual_price if prem else '—'}\n\n"
-            f"• звезда (наценка TON): {stars_m.manual_price if stars else '—'}\n"
-            f"• премиум/мес (наценка TON): {prem_m.manual_price if prem else '—'}\n\n",
+            f"• звезда (наценка TON): {stars_m.markup_percent if stars else '—'}%\n"
+            f"• премиум/мес (наценка TON): {prem_m.markup_percent if prem else '—'}%\n\n",
             parse_mode="HTML",
             reply_markup=pricing_kb()
         )
@@ -144,7 +144,7 @@ async def pricing_change(cb: types.CallbackQuery, state: FSMContext):
         # if not bot_key:
         #     await m.edit_text("Зеркальный бот не найден.", reply_markup=)
         #     return
-        await m.edit_text(text="Выберите продукт для изменения наценки (TON):", reply_markup=product_kb())
+        await m.edit_text(text="Выберите продукт для изменения наценки (TON):", reply_markup=product_markup_kb())
     # await state.set_state(PricingStates.waiting_price)
 
 @router.callback_query(F.data == ("change_stars_markup"))
