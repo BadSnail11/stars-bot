@@ -124,6 +124,7 @@ class OrdersRepo:
     async def change_memo(self, order_id: int, type: str, amount: float, memo: str, wallet: str, recipient: str | None):
         payload = {"wallet": wallet, "memo": memo, "network": "TON", "type": type, "amount": amount, "recipient": recipient}
         print(payload)
+        print(order_id)
         q = (
             update(Order).where(Order.id==order_id).values(gateway_payload=payload)
         )
