@@ -93,7 +93,9 @@ async def update_ton_price():
         repo = PricingRepo(session)
         user_bots = UserBotsRepo(session)
         bots = await user_bots.get_all()
+        print(bots)
         for bot in bots:
+            print(bot.id)
             await repo.set_active("stars", "TON", stars_price, bot.id)
             await repo.set_active("premium", "TON", premium_price, bot.id)
     print("prices updated")

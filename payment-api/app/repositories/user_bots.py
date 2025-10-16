@@ -60,5 +60,5 @@ class UserBotsRepo:
 
     async def get_all(self):
         r = await self.session.execute(select(UserBot))
-        bots = r.all()
+        bots = r.scalars().all()
         return bots
