@@ -49,3 +49,4 @@ class PricingRepo:
                 bot_id=bot_id
             )
         await self.session.execute(q)
+        await self.session.commit()

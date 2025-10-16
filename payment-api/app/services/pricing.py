@@ -89,6 +89,7 @@ async def get_ton_price_in_rub(session: AsyncSession, bot_id: int) -> Decimal:
 async def update_ton_price():
     print(1)
     stars_price, premium_price = await get_stars_price(), await get_premium_price()
+    print(stars_price, premium_price)
     async with SessionLocal() as session:
         repo = PricingRepo(session)
         user_bots = UserBotsRepo(session)
