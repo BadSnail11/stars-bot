@@ -1,6 +1,6 @@
 import os, aiohttp
 from typing import Any, Dict
-from .fragment_auth import auth
+# from .fragment_auth import auth
 
 def _base() -> str:
     return (os.getenv("FRAGMENT_BASE") or "https://api.fragment-api.com").rstrip("/")
@@ -11,8 +11,12 @@ def _ep(name_env: str, default_path: str) -> str:
         path = "/" + path
     return _base() + path
 
+async def get_auth_header() -> Dict[str, str]:
+        key = os.getenv("FRAGMENT_API_KEY", "")
+        return {"api-key": key}
+
 async def _post_json(url: str, payload: Dict[str, Any]) -> Dict[str, Any]:
-    headers = await auth.get_auth_header()
+    headers = await get_auth_header()
     headers["Content-Type"] = "application/json"
     async with aiohttp.ClientSession() as http:
         async with http.post(url, json=payload, headers=headers, timeout=aiohttp.ClientTimeout(total=30)) as r:
