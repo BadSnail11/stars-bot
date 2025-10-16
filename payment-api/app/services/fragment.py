@@ -12,8 +12,8 @@ def _ep(name_env: str, default_path: str) -> str:
     return _base() + path
 
 async def get_auth_header() -> Dict[str, str]:
-        key = os.getenv("FRAGMENT_API_KEY", "")
-        return {"api-key": key}
+    key = os.getenv("FRAGMENT_API_KEY", "")
+    return {"api-key": key}
 
 async def _post_json(url: str, payload: Dict[str, Any]) -> Dict[str, Any]:
     headers = await get_auth_header()
@@ -30,7 +30,7 @@ async def _post_json(url: str, payload: Dict[str, Any]) -> Dict[str, Any]:
             return data
         
 async def _get(url: str):
-    headers = await auth.get_auth_header()
+    headers = await get_auth_header()
     headers["Content-Type"] = "application/json"
     async with aiohttp.ClientSession() as http:
         async with http.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=30)) as r:
@@ -77,25 +77,26 @@ async def get_stars_price() -> float:
     url = _ep("FRAGMENT_CHECK_STARS", "/v1/stars/price")
     # payload = {"query": recipient, "months": months, "show_sender": False}
     data = await _get(url)
-    print(data)
+    # print(data)
     row = dict()
     for el in data:
-        if el["stars"] == "50 stars":
+        if el["stars"] == "50 Stars":
             row = el
+    # print(row)
     amount = row["stars"].split(" ")[0]
     price = row["price_ton"]
-    return price / amount
+    return float(price) / float(amount)
 
 async def get_premium_price() -> float:
     """Покупка / дарение Premium"""
     url = _ep("FRAGMENT_CHECK_PREMIUM", "/v1/premium/price")
     # payload = {"query": recipient, "months": months, "show_sender": False}
     data = await _get(url)
-    print(data)
+    # print(data)
     row = dict()
     for el in data:
         if el["duration"] == "3 months":
             row = el
-    amount = row["months"].split(" ")[0]
+    amount = row["duration"].split(" ")[0]
     price = row["price_ton"]
-    return price / amount
+    return float(price) / float(amount)
