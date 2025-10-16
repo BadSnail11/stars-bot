@@ -65,7 +65,7 @@ async def create_order(payload: CreateOrderRequest):
                 memo = await generate_memo(os.getenv('TON_MEMO_PREFIX','INV-'), order_id, str(user.tg_user_id))
                 await orders.change_memo(order.id, payload.order_type, qty, memo, wallet, payload.recipient)
                 # запустим фоновую проверку TON
-                asyncio.create_task(_background_ton_check(order.id, wallet, memo, total_ton))
+                asyncio.create_task(_background_ton_check(order.id, wallet, memo, total_ton, bot_id))
                 return CreateOrderResponse(
                     order_id=order.id, status=order.status,
                     ton={"address": wallet, "memo": memo, "amount_ton": str(total_ton)}
@@ -90,7 +90,7 @@ async def create_order(payload: CreateOrderRequest):
                     redirect_url=redirect
                 )
                 # фоновый пуллинг статуса
-                asyncio.create_task(_background_sbp_check(order.id, tx_id))
+                asyncio.create_task(_background_sbp_check(order.id, tx_id, bot_id))
                 return CreateOrderResponse(
                     order_id=order.id, status=order.status,
                     sbp={"redirect_url": redirect, "transaction_id": tx_id, "amount_rub": amount_rub}
@@ -137,7 +137,7 @@ async def create_order(payload: CreateOrderRequest):
                 })
 
                 # запустим фоновый пуллинг статуса (если не пользуешься вебхуком)
-                asyncio.create_task(_background_heleket_check(order.id, user.tg_user_id))
+                asyncio.create_task(_background_heleket_check(order.id, user.tg_user_id, bot_id))
 
                 return CreateOrderResponse(
                     order_id=order.id,
@@ -173,7 +173,7 @@ async def create_order(payload: CreateOrderRequest):
                 order_id = str(order.id)
                 memo = await generate_memo(os.getenv('TON_MEMO_PREFIX','INV-'), order_id, str(user.tg_user_id))
                 await orders.change_memo(order.id, payload.order_type, months, memo, wallet, payload.recipient)
-                asyncio.create_task(_background_ton_check(order.id, wallet, memo, total_ton))
+                asyncio.create_task(_background_ton_check(order.id, wallet, memo, total_ton, bot_id))
                 return CreateOrderResponse(
                     order_id=order.id, status=order.status,
                     ton={"address": wallet, "memo": memo, "amount_ton": str(total_ton)}
@@ -197,7 +197,7 @@ async def create_order(payload: CreateOrderRequest):
                     transaction_id=tx_id,
                     redirect_url=redirect
                 )
-                asyncio.create_task(_background_sbp_check(order.id, tx_id))
+                asyncio.create_task(_background_sbp_check(order.id, tx_id, bot_id))
                 return CreateOrderResponse(
                     order_id=order.id, status=order.status,
                     sbp={"redirect_url": redirect, "transaction_id": tx_id, "amount_rub": amount_rub}
@@ -266,7 +266,7 @@ async def get_order_status(order_id: int):
 
 # ==== фоновые операции ====
 
-async def _on_paid(order_id: int, tx_hash: str | None):
+async def _on_paid(order_id: int, tx_hash: str | None, bot_id: int):
     async with SessionLocal() as session:
         orders = OrdersRepo(session)
         order = await orders.get_by_id(order_id)
@@ -277,26 +277,31 @@ async def _on_paid(order_id: int, tx_hash: str | None):
         # Рефералка
         fresh = await orders.get_by_id(order_id)
         from ..services.referral_accrual import accrue_referral_reward
-        await accrue_referral_reward(session, fresh)
+        await accrue_referral_reward(session, fresh, bot_id)
 
         # Фулфилмент через Fragment
         from ..services.fulfillment import fulfill_order
         ok, msg = await fulfill_order(session, fresh)
 
-async def _background_ton_check(order_id: int, wallet: str, memo: str, total_ton: Decimal):
+async def _background_ton_check(order_id: int, wallet: str, memo: str, total_ton: Decimal, bot_id: int):
     tx_hash = await wait_ton_payment(wallet, memo, total_ton)
     if tx_hash:
-        await _on_paid(order_id, tx_hash)
+        await _on_paid(order_id, tx_hash, bot_id)
 
-async def _background_sbp_check(order_id: int, tx_id: str):
+async def _background_sbp_check(order_id: int, tx_id: str, bot_id):
     status_tx = await wait_payment_confirmed(tx_id)
     if status_tx:
-        await _on_paid(order_id, status_tx)
+        await _on_paid(order_id, status_tx, bot_id)
 
 
-async def _background_heleket_check(order_id: int, user_tg_id: int):
+async def _background_heleket_check(order_id: int, user_tg_id: int, bot_id: int):
     res = await wait_invoice_paid(order_id=str(order_id), user_tg_id=str(user_tg_id), poll_interval=10)
     if res:
-        await _on_paid(order_id, res.get("txid"))
+        await _on_paid(order_id, res.get("txid"), bot_id)
 
 
+
+
+@router.post("/test")
+async def create_order():
+    await _on_paid(57, "19bc4910dbd5a0345fb39216c1134fbb6a6dd3ecbe0ec7f2682e5fb74afee67c", 1)

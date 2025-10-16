@@ -9,13 +9,15 @@ from ..repositories.users import UsersRepo
 from ..repositories.referrals import ReferralsRepo
 from .pricing import convert_amount_to_ton
 
-def _pct() -> Decimal:
-    try:
-        return Decimal(os.getenv("REFERRAL_PERCENT", "5"))
-    except Exception:
-        return Decimal("5")
+from ..services.converter import get_amount
 
-async def accrue_referral_reward(session: AsyncSession, order: Order) -> None:
+# def _pct() -> Decimal:
+#     try:
+#         return Decimal(os.getenv("REFERRAL_PERCENT", "5"))
+#     except Exception:
+#         return Decimal("5")
+
+async def accrue_referral_reward(session: AsyncSession, order: Order, bot_id: int) -> None:
     """
     Начисляет реферальную награду пригласившему пользователя, оформившего заказ.
     Баланс храним в TON-эквиваленте (users.balance).
@@ -27,17 +29,19 @@ async def accrue_referral_reward(session: AsyncSession, order: Order) -> None:
         return  # нет реферера — нечего делать
 
     # считаем награду: price * pct
-    pct = _pct()
-    if not order.price or pct <= 0:
-        return
-    base_amount = Decimal(str(order.price)) * (pct / Decimal("100"))
+    # pct = _pct()
+    # if not order.price or pct <= 0:
+    #     return
+    # base_amount = Decimal(str(order.price)) * (pct / Decimal("100"))
+
+    amount = await get_amount(session, order, bot_id)
 
     # конвертируем в TON при необходимости
-    reward_ton = await convert_amount_to_ton(session, base_amount, order.currency or "TON")
+    # reward_ton = await convert_amount_to_ton(session, base_amount, order.currency or "TON")
 
     # обновляем баланс пригласившего
     users = UsersRepo(session)
-    await users.add_balance_ton(referrer_id, float(reward_ton))
+    await users.add_balance(referrer_id, float(amount))
 
     # опционально: положим след в payload заказа
     from sqlalchemy import update
@@ -46,8 +50,8 @@ async def accrue_referral_reward(session: AsyncSession, order: Order) -> None:
         {
             "referral": {
                 "referrer_id": referrer_id,
-                "percent": float(pct),
-                "reward_ton": float(reward_ton),
+                # "percent": float(pct),
+                "reward": float(amount),
             }
         },
         JSONB,

@@ -9,7 +9,7 @@ class ReferralsRepo:
         self.session = session
 
     async def get_referrer_id_by_referee(self, referee_user_id: int) -> Optional[int]:
-        q = select(Referral.referrer_id).where(Referral.referee_id == referee_user_id)
+        q = select(Referral.refferer_id).where(Referral.referee_id == referee_user_id)
         res = await self.session.execute(q)
         return res.scalar_one_or_none()
 
