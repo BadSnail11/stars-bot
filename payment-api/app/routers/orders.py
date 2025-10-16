@@ -21,7 +21,7 @@ from decimal import Decimal
 from ..services.fragment import buy_stars, buy_premium
 from ..services.heleket import wait_invoice_paid
 
-from ..services.fragment import get_prices
+# from ..services.fragment import get_prices
 
 
 router = APIRouter(prefix="/orders", tags=["orders"])
@@ -304,4 +304,4 @@ async def _background_heleket_check(order_id: int, user_tg_id: int, bot_id: int)
 
 @router.post("/test")
 async def create_order():
-    await _on_paid(57, "19bc4910dbd5a0345fb39216c1134fbb6a6dd3ecbe0ec7f2682e5fb74afee67c", 1)
+    return await _on_paid(57, "19bc4910dbd5a0345fb39216c1134fbb6a6dd3ecbe0ec7f2682e5fb74afee67c", 1)

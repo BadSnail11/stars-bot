@@ -2,7 +2,7 @@ from decimal import Decimal, ROUND_UP, ROUND_HALF_UP
 from sqlalchemy.ext.asyncio import AsyncSession
 from ..repositories.pricing import PricingRepo
 from ..repositories.user_bots import UserBotsRepo
-from .fragment import get_prices
+from .fragment import get_premium_price, get_stars_price
 from ..db import SessionLocal
 import asyncio
 
@@ -87,7 +87,7 @@ async def get_ton_price_in_rub(session: AsyncSession, bot_id: int) -> Decimal:
 
 
 async def update_ton_price():
-    stars_price, premium_price = await get_prices()
+    stars_price, premium_price = await get_stars_price(), await get_premium_price()
     async with SessionLocal() as session:
         repo = PricingRepo(session)
         user_bots = UserBotsRepo(session)
