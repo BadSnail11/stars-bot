@@ -116,12 +116,14 @@ def get_router(session_maker: async_sessionmaker) -> Router:
     @router.callback_query(F.data == "accept")
     async def choose_net(cb: types.CallbackQuery, state: FSMContext):
         data = await state.get_data()
-        address = data.get("address")
-        amount = data.get("amount")
-        net = data.get("net")
+        address = str(data.get("address"))
+        amount = float(data.get("amount"))
+        net = str(data.get("net"))
         m = cb.message
 
-        res = await create_withdraw(m.chat.id, address, amount, net)
+        print(m.chat.id, address, amount, net)
+
+        res = await create_withdraw(int(m.chat.id), address, amount, net)
 
         await m.edit_text("Введите Адрес своего кошелька (ВАЖНО, не допустите ошибку в адресе кошелька, иначе средства поступят не на тот адрес БЕЗВОЗВРАТНО):")
         await state.clear()
