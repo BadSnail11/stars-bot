@@ -63,6 +63,8 @@ def get_router(session_maker: async_sessionmaker) -> Router:
             users = UsersRepo(s)
             user = await users.get_by_tg_id(m.from_user.id)
             balance = user.balance
+
+        print(balance)
         
         if balance < _min_balace:
             await m.edit_text(text=f"Вывод доступен от {_min_balace} USD", reply_markup=back_nav_kb())
