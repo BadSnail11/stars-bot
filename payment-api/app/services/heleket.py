@@ -10,14 +10,8 @@ PAYMENT_KEY = os.getenv("HELEKET_PAYMENT_API_KEY", "")
 PAYOUT_KEY = os.getenv("HELEKET_PAYOUT_API_KEY", "")
 
 def _sign_payload(payload_obj: dict, is_payout: bool = False) -> str:
-    # md5(base64(json) + API_KEY)
-    # raw = json.dumps(payload_obj, ensure_ascii=False, separators=(",", ":"))
-    # b64 = base64.b64encode(raw.encode("utf-8")).decode("ascii")
-    # return hashlib.md5((b64 + PAYMENT_KEY).encode("utf-8")).hexdigest()
-    data = json.dumps(payload_obj)  # или json.dumps(data, ensure_ascii=False) для кириллицы
+    data = json.dumps(payload_obj)
 
-    # PHP: $sign = md5(base64_encode($data) . $API_KEY);
-    # Кодируем данные в base64
     encoded_data = base64.b64encode(data.encode('utf-8')).decode('utf-8')
 
     key = PAYOUT_KEY if is_payout else PAYMENT_KEY
@@ -122,16 +116,14 @@ async def create_withdraw(order_id: str, to_address: str, amount: str, network: 
     """
     Создать выплату. Возвращает (provider_id, payload).
     """
-    # print(order_id, to_address, amount, network)
-    body = {"amount": amount,
+    body = {"amount": str(amount),
             "currency": "USDT",
-            "order_id": order_id,
-            "address": to_address,
-            "is_subtract": "0",
-            "network": network,
-            "url_callback": "http://89.223.126.202:8081/heleket/callback",
+            "order_id": str(order_id),
+            "address": str(to_address),
+            "is_subtract": False,
+            "network": str(network),
+            # "url_callback": "http://89.223.126.202:8081/heleket/callback",
         }
-    print(body)
     return await _post_json("/v1/payout", body, True)
 
 async def generate_order_id(order_id: str, user_tg_id: str):
