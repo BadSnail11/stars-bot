@@ -111,7 +111,7 @@ def get_router(session_maker: async_sessionmaker) -> Router:
                  f"Сумма: {amount} USTD\n"
                  f"Сеть: {net}\n"
                  f"Адрес: {address}", reply_markup=accept_kb())
-        await state.clear()
+        await state.set_state(Referral.accept_withdraw)
 
     @router.callback_query(F.data == "accept")
     async def choose_net(cb: types.CallbackQuery, state: FSMContext):
