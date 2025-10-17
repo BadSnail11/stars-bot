@@ -3,7 +3,7 @@ from aiogram import Router, types, F
 # from aiogram.filters import Text
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from ..services.referral import build_ref_link
-from ..keyboards.common import main_menu_kb, back_nav_kb, network_kb  # если у тебя есть главное меню
+from ..keyboards.common import main_menu_kb, back_nav_kb, network_kb, accept_kb  # если у тебя есть главное меню
 from ..repositories.users import UsersRepo
 import os
 from sqlalchemy.ext.asyncio import async_sessionmaker
@@ -97,7 +97,7 @@ def get_router(session_maker: async_sessionmaker) -> Router:
         net = cb.data.split("_")[1]
         await state.update_data(net=net)
         m = cb.message
-        await m.edit_text("Введите Адрес своего кошелька (ВАЖНО, не допустите ошибку в адресе кошелька, иначе средства поступят не на тот адрес БЕЗВОЗВРАТНО):")
+        await m.edit_text("Введите Адрес своего кошелька (ВАЖНО, не допустите ошибку в адресе кошелька, иначе средства поступят не на тот адрес БЕЗВОЗВРАТНО):", reply_markup=back_nav_kb())
         await state.set_state(Referral.enter_address)
 
     @router.message(Referral.enter_address)
@@ -110,7 +110,7 @@ def get_router(session_maker: async_sessionmaker) -> Router:
         await m.answer(text=f"Подтвердите ваши данные:\n"
                  f"Сумма: {amount} USTD\n"
                  f"Сеть: {net}\n"
-                 f"Адрес: {address}", reply_markup=network_kb())
+                 f"Адрес: {address}", reply_markup=accept_kb())
         await state.clear()
 
     @router.callback_query(F.data == "accept")
