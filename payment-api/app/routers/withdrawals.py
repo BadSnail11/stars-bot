@@ -14,16 +14,16 @@ router = APIRouter(tags=["wallet"])
 
 class WithdrawIn(BaseModel):
     user_id: int
-    to_address: str = Field(..., min_length=10)
-    amount: Decimal = Field(..., gt=0)
-    network: str = Field(..., max_length=10)
+    to_address: str
+    amount: float
+    network: str
 
 @router.post("/withdraw")
 async def create_withdraw(req: WithdrawIn):
     async with SessionLocal() as db:
         try:
             # print(int(req.user_id), req.to_address, Decimal(req.amount))
-            result = await request_withdrawal(db, user_id=int(req.user_id), to_address=req.to_address, amount=Decimal(req.amount), network=req.network)
+            result = await request_withdrawal(db, user_id=int(req.user_id), to_address=req.to_address, amount=Decimal(str(req.amount)), network=req.network)
             return {"ok": True, **result}
         except WithdrawalLogicError as e:
             raise HTTPException(status_code=400, detail=str(e))

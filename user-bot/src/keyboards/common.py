@@ -102,5 +102,5 @@ def network_kb() -> types.InlineKeyboardMarkup:
 
 def accept_kb() -> types.InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
-    kb.row(*[types.InlineKeyboardButton(text="Подтвердит", callback_data="accept"), types.InlineKeyboardButton(text="В меню", callback_data="nav_back")])
+    kb.row(*[types.InlineKeyboardButton(text="Подтвердить", callback_data="accept"), types.InlineKeyboardButton(text="В меню", callback_data="nav_back")])
     return kb.as_markup()
