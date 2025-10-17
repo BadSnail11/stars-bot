@@ -55,7 +55,7 @@ def get_router(session_maker: async_sessionmaker) -> Router:
         await cb.answer()
 
     @router.callback_query(F.data == "withdraw")
-    async def withdraw(cb: types.CallbackQuery, context: FSMContext):
+    async def withdraw(cb: types.CallbackQuery, state: FSMContext):
         m = cb.message
         me = await m.bot.get_me()
         
@@ -69,59 +69,59 @@ def get_router(session_maker: async_sessionmaker) -> Router:
             return
 
         m.edit_text(text=f"Введите количество USD на вывод (не меньше {_min_balace} USD):", reply_markup=back_nav_kb())
-        await context.set_state(Referral.enter_amount)
+        await state.set_state(Referral.enter_amount)
 
     @router.message(Referral.enter_amount)
-    async def enter_amount(m: types.Message, context: FSMContext):
+    async def enter_amount(m: types.Message, state: FSMContext):
         try:
             amount = float(m.text)
         except:
             m.answer("На ввод ожидается число!", reply_markup=back_nav_kb())
-            await context.clear()
+            await state.clear()
             return
         
         if amount < _min_balace:
             m.answer(f"Сумма должна быть больше {_min_balace}", reply_markup=back_nav_kb())
-            await context.clear()
+            await state.clear()
             return
         
-        await context.update_data(amount=amount)
+        await state.update_data(amount=amount)
         
         m.answer(text=f"Выберите сеть:", reply_markup=network_kb())
         # await context.set_state(Referral.enter_network)
     
     @router.callback_query(F.data.split("_")[0] == "NET")
-    async def choose_net(cb: types.CallbackQuery, context: FSMContext):
+    async def choose_net(cb: types.CallbackQuery, state: FSMContext):
         net = cb.data.split("_")[1]
-        await context.update_data(net=net)
+        await state.update_data(net=net)
         m = cb.message
         m.edit_text("Введите Адрес своего кошелька (ВАЖНО, не допустите ошибку в адресе кошелька, иначе средства поступят не на тот адрес БЕЗВОЗВРАТНО):")
-        await context.set_state(Referral.enter_address)
+        await state.set_state(Referral.enter_address)
 
     @router.message(Referral.enter_address)
-    async def enter_address(m: types.Message, context: FSMContext):
+    async def enter_address(m: types.Message, state: FSMContext):
         address = m.text
-        await context.update_data(address=address)
-        data = await context.get_data()
+        await state.update_data(address=address)
+        data = await state.get_data()
         amount = data.get("amount")
         net = data.get("net")
         m.answer(text=f"Подтвердите ваши данные:\n"
                  f"Сумма: {amount} USTD\n"
                  f"Сеть: {net}\n"
                  f"Адрес: {address}", reply_markup=network_kb())
-        await context.clear()
+        await state.clear()
 
     @router.callback_query(F.data == "accept")
-    async def choose_net(cb: types.CallbackQuery, context: FSMContext):
-        data = await context.get_data()
+    async def choose_net(cb: types.CallbackQuery, state: FSMContext):
+        data = await state.get_data()
         address = data.get("address")
         amount = data.get("amount")
         net = data.get("net")
         m = cb.message
 
-
+        res = await create_withdraw(m.chat.id, address, amount, net)
 
         m.edit_text("Введите Адрес своего кошелька (ВАЖНО, не допустите ошибку в адресе кошелька, иначе средства поступят не на тот адрес БЕЗВОЗВРАТНО):")
-        await context.clear()
+        await state.clear()
 
     return router
