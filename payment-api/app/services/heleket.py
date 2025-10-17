@@ -124,7 +124,7 @@ async def create_withdraw(order_id: str, to_address: str, amount: str, network: 
             "currency": "USDT",
             "order_id": order_id,
             "address": to_address,
-            "is_subtract": "0",
+            "is_subtract": False,
             "network": network
         }
     return await _post_json("/v1/payout", body, True)
