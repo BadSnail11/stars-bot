@@ -119,15 +119,16 @@ async def create_withdraw(order_id: str, to_address: str, amount: str, network: 
     """
     Создать выплату. Возвращает (provider_id, payload).
     """
-    print(order_id, to_address, amount, network)
+    # print(order_id, to_address, amount, network)
     body = {"amount": amount,
             "currency": "USDT",
             "order_id": order_id,
             "address": to_address,
-            "is_subtract": False,
+            "is_subtract": "0",
             "network": network,
-            "url_callback": "http://89.223.126.202:8081/heleket/callback"
+            "url_callback": "http://89.223.126.202:8081/heleket/callback",
         }
+    print(body)
     return await _post_json("/v1/payout", body, True)
 
 async def generate_order_id(order_id: str, user_tg_id: str):
