@@ -58,7 +58,6 @@ def get_router(session_maker: async_sessionmaker) -> Router:
     async def withdraw(cb: types.CallbackQuery, state: FSMContext):
         print(1)
         m = cb.message
-        me = await m.bot.get_me()
         
         async with session_maker() as s:
             users = UsersRepo(s)
@@ -66,10 +65,10 @@ def get_router(session_maker: async_sessionmaker) -> Router:
             balance = user.balance
         
         if balance < _min_balace:
-            m.edit_text(text=f"Вывод доступен от {_min_balace} USD", reply_markup=back_nav_kb())
+            await m.edit_text(text=f"Вывод доступен от {_min_balace} USD", reply_markup=back_nav_kb())
             return
 
-        m.edit_text(text=f"Введите количество USD на вывод (не меньше {_min_balace} USD):", reply_markup=back_nav_kb())
+        await m.edit_text(text=f"Введите количество USD на вывод (не меньше {_min_balace} USD):", reply_markup=back_nav_kb())
         await state.set_state(Referral.enter_amount)
 
     @router.message(Referral.enter_amount)
@@ -77,18 +76,18 @@ def get_router(session_maker: async_sessionmaker) -> Router:
         try:
             amount = float(m.text)
         except:
-            m.answer("На ввод ожидается число!", reply_markup=back_nav_kb())
+            await m.answer("На ввод ожидается число!", reply_markup=back_nav_kb())
             await state.clear()
             return
         
         if amount < _min_balace:
-            m.answer(f"Сумма должна быть больше {_min_balace}", reply_markup=back_nav_kb())
+            await m.answer(f"Сумма должна быть больше {_min_balace}", reply_markup=back_nav_kb())
             await state.clear()
             return
         
         await state.update_data(amount=amount)
         
-        m.answer(text=f"Выберите сеть:", reply_markup=network_kb())
+        await m.answer(text=f"Выберите сеть:", reply_markup=network_kb())
         # await context.set_state(Referral.enter_network)
     
     @router.callback_query(F.data.split("_")[0] == "NET")
@@ -96,7 +95,7 @@ def get_router(session_maker: async_sessionmaker) -> Router:
         net = cb.data.split("_")[1]
         await state.update_data(net=net)
         m = cb.message
-        m.edit_text("Введите Адрес своего кошелька (ВАЖНО, не допустите ошибку в адресе кошелька, иначе средства поступят не на тот адрес БЕЗВОЗВРАТНО):")
+        await m.edit_text("Введите Адрес своего кошелька (ВАЖНО, не допустите ошибку в адресе кошелька, иначе средства поступят не на тот адрес БЕЗВОЗВРАТНО):")
         await state.set_state(Referral.enter_address)
 
     @router.message(Referral.enter_address)
@@ -106,7 +105,7 @@ def get_router(session_maker: async_sessionmaker) -> Router:
         data = await state.get_data()
         amount = data.get("amount")
         net = data.get("net")
-        m.answer(text=f"Подтвердите ваши данные:\n"
+        await m.answer(text=f"Подтвердите ваши данные:\n"
                  f"Сумма: {amount} USTD\n"
                  f"Сеть: {net}\n"
                  f"Адрес: {address}", reply_markup=network_kb())
@@ -122,7 +121,7 @@ def get_router(session_maker: async_sessionmaker) -> Router:
 
         res = await create_withdraw(m.chat.id, address, amount, net)
 
-        m.edit_text("Введите Адрес своего кошелька (ВАЖНО, не допустите ошибку в адресе кошелька, иначе средства поступят не на тот адрес БЕЗВОЗВРАТНО):")
+        await m.edit_text("Введите Адрес своего кошелька (ВАЖНО, не допустите ошибку в адресе кошелька, иначе средства поступят не на тот адрес БЕЗВОЗВРАТНО):")
         await state.clear()
 
     return router
