@@ -120,8 +120,8 @@ async def create_withdraw(order_id: str, to_address: str, amount: str, network: 
     Создать выплату. Возвращает (provider_id, payload).
     """
     print(order_id, to_address, amount, network)
-    body = {"currency": "USDT",
-            "amount": amount,
+    body = {"amount": amount,
+            "currency": "USDT",
             "order_id": order_id,
             "address": to_address,
             "is_subtract": "0",

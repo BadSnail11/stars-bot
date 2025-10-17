@@ -121,9 +121,15 @@ def get_router(session_maker: async_sessionmaker) -> Router:
         net = str(data.get("net"))
         m = cb.message
 
+        async with session_maker() as s:
+            users = UsersRepo(s)
+            user = await users.get_by_tg_id(m.chat.id)
+
+        user_id = user.id
+
         print(m.chat.id, address, amount, net)
 
-        res = await create_withdraw(int(m.chat.id), address, amount, net)
+        res = await create_withdraw(int(user_id), address, amount, net)
 
         await m.edit_text("Введите Адрес своего кошелька (ВАЖНО, не допустите ошибку в адресе кошелька, иначе средства поступят не на тот адрес БЕЗВОЗВРАТНО):")
         await state.clear()

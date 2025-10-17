@@ -5,7 +5,7 @@ from sqlalchemy import text
 from typing import Optional
 
 from app.repositories.withdrawals import WithdrawalsRepo
-from app.services.heleket import create_withdraw
+from app.services.heleket import create_withdraw, generate_order_id
 
 MIN = Decimal(os.getenv("WITHDRAW_MIN", "0.5"))
 MAX = Decimal(os.getenv("WITHDRAW_MAX", "100000"))
@@ -37,14 +37,16 @@ async def request_withdrawal(s: AsyncSession, user_id: int, to_address: str, amo
     balance = await _get_user_balance(s, user_id)
     if balance < amount:
         raise WithdrawalLogicError("Недостаточно средств на балансе")
+    
 
     repo = WithdrawalsRepo(s)
     wid = await repo.create(user_id=user_id, amount=float(amount), to_address=to_address, currency="USDT")
 
+    gen_order_id = await generate_order_id(str(wid), str(user_id))
     await _add_user_balance(s, user_id, delta=-amount)
 
     # создаём выплату в Heleket
-    response = await create_withdraw(order_id=str(wid), to_address=to_address, amount=str(amount), network=network)
+    response = await create_withdraw(order_id=gen_order_id, to_address=str(to_address), amount=str(amount), network=str(network))
 
     await repo.set_processing(wid, str(wid), response)
     await s.commit()
