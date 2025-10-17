@@ -125,7 +125,8 @@ async def create_withdraw(order_id: str, to_address: str, amount: str, network: 
             "order_id": order_id,
             "address": to_address,
             "is_subtract": False,
-            "network": network
+            "network": network,
+            "url_callback": "http://89.223.126.202:8081/heleket/callback"
         }
     return await _post_json("/v1/payout", body, True)
 
