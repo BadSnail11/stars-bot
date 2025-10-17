@@ -32,6 +32,7 @@ async def create_order(
         "payment_method": payment_method,
         "bot_tg_id": bot_tg_id
     }
+    print(body)
     async with aiohttp.ClientSession() as http:
         async with http.post(f"{PAYMENT_API}/orders", json=body, timeout=30) as r:
             r.raise_for_status()
