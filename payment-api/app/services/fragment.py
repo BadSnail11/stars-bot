@@ -1,6 +1,6 @@
 import os, aiohttp
 from typing import Any, Dict
-from ..services.converter import convert_ton_to_rub
+# from ..services.converter import convert_ton_to_rub
 # from .fragment_auth import auth
 
 def _base() -> str:
@@ -106,7 +106,3 @@ async def get_premium_price() -> float:
     amount = row["duration"].split(" ")[0]
     price = row["price_ton"]
     return float(price) / float(amount)
-
-async def get_ton_price() -> int:
-    converted = await convert_ton_to_rub(1)
-    return int(converted) + (0 if converted.is_integer else 1)
