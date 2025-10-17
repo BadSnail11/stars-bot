@@ -13,7 +13,7 @@ from .db import init_engine, close_engine, get_session_maker
 # from .build_dispatcher import build_dispatcher
 from .utils import on_startup_banner
 from src.handlers import mirror
-from .handlers import start, menu, stars, premium, history, referral, test_fragment
+from .handlers import start, menu, stars, premium, history, referral, test_fragment, ton
 from .services.mirror_manager import MirrorManager
 from src.services.polling_manager import PollingManager
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
@@ -85,6 +85,7 @@ async def main():
     dp.include_router(menu.get_router(session_maker))
     dp.include_router(stars.get_router(session_maker))
     dp.include_router(premium.get_router(session_maker))
+    dp.include_router(ton.get_router(session_maker))
     dp.include_router(history.get_router(session_maker))
     dp.include_router(referral.get_router(session_maker))
     dp.include_router(mirror.get_router(session_maker))
