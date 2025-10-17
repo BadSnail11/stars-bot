@@ -6,14 +6,13 @@ import requests
 
 from currency_converter import CurrencyConverter
 
-async def get_amount(session: AsyncSession, order: Order, bot_id: int) -> float:
+async def get_amount(session: AsyncSession, order: Order, bot_id: int) -> float | None:
     repo = PricingRepo(session)
     price_ton = await repo.get_active_dynamic(order.type, "TON", bot_id)
-        
     if order.type == "stars":
-        self_price = calc_ton_for_stars(order.amount, price_ton.manual_price)
+        self_price = float(calc_ton_for_stars(order.amount, price_ton.manual_price))
     if order.type == "premium":
-        self_price = calc_ton_for_premium(order.amount, price_ton.manual_price)
+        self_price = float(calc_ton_for_premium(order.amount, price_ton.manual_price))
 
     price = order.price
     if order.currency == "TON":
@@ -29,9 +28,9 @@ async def get_amount(session: AsyncSession, order: Order, bot_id: int) -> float:
         #     self_price = calc_rub_for_stars(order.amount, price_rub.manual_price)
         # if order.type == "premium":
         #     self_price = calc_rub_for_premium(order.amount, price_rub.manual_price)
-        self_price = await convert_ton_to_rub(self_price)
+        self_price = float(await convert_ton_to_rub(self_price))
 
-        marge = price - self_price
+        marge = float(price) - self_price
 
         amount = marge / 100 * 40
 
@@ -42,7 +41,7 @@ async def get_amount(session: AsyncSession, order: Order, bot_id: int) -> float:
 
 
 
-def get_ton_to_usd_price():
+async def get_ton_to_usd_price():
     """Получает текущую цену TON в USD через CoinGecko API"""
     try:
         url = "https://api.coingecko.com/api/v3/simple/price"
@@ -62,9 +61,9 @@ def get_ton_to_usd_price():
         print(f"Ошибка при запросе к API: {e}")
         return None
 
-def convert_ton_to_usd(amount):
+async def convert_ton_to_usd(amount):
     """Конвертирует количество TON в USD"""
-    price = get_ton_to_usd_price()
+    price = await get_ton_to_usd_price()
     if price is not None:
         usd_amount = amount * price
         return usd_amount
@@ -74,8 +73,9 @@ def convert_ton_to_usd(amount):
 async def convert_ton_to_rub(amount: float) -> float:
     usd_amount = await convert_ton_to_usd(amount)
     c = CurrencyConverter()
-    return c.convert(usd_amount, 'USD', 'RUB')
+    usd_to_rub = float(c.convert(1, 'RUB', 'USD'))
+    return usd_amount / usd_to_rub
 
 async def convert_rub_to_usd(amount: float) -> float:
     c = CurrencyConverter()
-    return c.convert(amount, 'RUB', 'USD')
+    return float(c.convert(amount, 'RUB', 'USD'))

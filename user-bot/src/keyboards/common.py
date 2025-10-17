@@ -34,6 +34,7 @@ def main_menu_kb() -> types.InlineKeyboardMarkup:
     # ]
     kb = InlineKeyboardBuilder()
     kb.row(*[types.InlineKeyboardButton(text="⭐ Купить звёзды", callback_data="stars"), types.InlineKeyboardButton(text="👑 Премиум", callback_data="premium")])
+    kb.row(*[types.InlineKeyboardButton(text="💎 Купить TON", callback_data="ton")])
     kb.row(*[types.InlineKeyboardButton(text="🧾 История заказов", callback_data="history"), types.InlineKeyboardButton(text="🆘 Поддержка", callback_data="support")])
     kb.row(*[types.InlineKeyboardButton(text="👥 Реферальная программа", callback_data="referal"), types.InlineKeyboardButton(text="🤖 Создать свой бот", callback_data="create_bot")])
     kb.row(*[types.InlineKeyboardButton(text="📄 Оферта", callback_data="offer")])

@@ -7,7 +7,6 @@ from sqlalchemy.dialects.postgresql import JSONB
 from ..models import Order
 from ..repositories.users import UsersRepo
 from ..repositories.referrals import ReferralsRepo
-from .pricing import convert_amount_to_ton
 
 from ..services.converter import get_amount
 
@@ -25,6 +24,7 @@ async def accrue_referral_reward(session: AsyncSession, order: Order, bot_id: in
     # находим пригласившего
     refs = ReferralsRepo(session)
     referrer_id = await refs.get_referrer_id_by_referee(order.user_id)
+    print("ref_id:", referrer_id)
     if not referrer_id:
         return  # нет реферера — нечего делать
 
@@ -35,6 +35,7 @@ async def accrue_referral_reward(session: AsyncSession, order: Order, bot_id: in
     # base_amount = Decimal(str(order.price)) * (pct / Decimal("100"))
 
     amount = await get_amount(session, order, bot_id)
+    print("amount:", amount)
 
     # конвертируем в TON при необходимости
     # reward_ton = await convert_amount_to_ton(session, base_amount, order.currency or "TON")
@@ -44,22 +45,22 @@ async def accrue_referral_reward(session: AsyncSession, order: Order, bot_id: in
     await users.add_balance(referrer_id, float(amount))
 
     # опционально: положим след в payload заказа
-    from sqlalchemy import update
-    from ..models import Order as OrderModel
-    new_kv = cast(
-        {
-            "referral": {
-                "referrer_id": referrer_id,
-                # "percent": float(pct),
-                "reward": float(amount),
-            }
-        },
-        JSONB,
-    )
-    merged = func.coalesce(OrderModel.gateway_payload, cast({}, JSONB)).op("||")(new_kv)
-    await session.execute(
-        update(OrderModel)
-        .where(OrderModel.id == order.id)
-        .values(gateway_payload=merged)
-    )
-    await session.commit()
+    # from sqlalchemy import update
+    # from ..models import Order as OrderModel
+    # new_kv = cast(
+    #     {
+    #         "referral": {
+    #             "referrer_id": referrer_id,
+    #             # "percent": float(pct),
+    #             "reward": float(amount),
+    #         }
+    #     },
+    #     JSONB,
+    # )
+    # merged = func.coalesce(OrderModel.gateway_payload, cast({}, JSONB)).op("||")(new_kv)
+    # await session.execute(
+    #     update(OrderModel)
+    #     .where(OrderModel.id == order.id)
+    #     .values(gateway_payload=merged)
+    # )
+    # await session.commit()

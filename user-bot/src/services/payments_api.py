@@ -5,7 +5,7 @@ from typing import Optional, Literal, TypedDict
 PAYMENT_API = os.getenv("PAYMENT_API_BASE", "http://payment-api:8081").rstrip("/")
 
 PaymentMethod = Literal["TON", "SBP", "CRYPTO_OTHER"]
-OrderType = Literal["stars", "premium"]
+OrderType = Literal["stars", "premium", "ton"]
 
 class CreateOrderResult(TypedDict, total=False):
     order_id: int

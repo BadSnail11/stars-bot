@@ -1,5 +1,6 @@
 import os, aiohttp
 from typing import Any, Dict
+from ..services.converter import convert_ton_to_rub
 # from .fragment_auth import auth
 
 def _base() -> str:
@@ -58,13 +59,18 @@ async def _get(url: str):
 async def buy_stars(recipient: str, quantity: int) -> Dict[str, Any]:
     """Покупка / дарение звёзд"""
     url = _ep(f"FRAGMENT_EP_STARS/payment", "/v1/stars/payment")
-    payload = {"query": recipient, "quantity": quantity, "show_sender": False}
+    payload = {"query": str(recipient), "quantity": str(quantity), "show_sender": "0"}
     return await _post_json(url, payload)
 
 async def buy_premium(recipient: str, months: int) -> Dict[str, Any]:
     """Покупка / дарение Premium"""
     url = _ep("FRAGMENT_EP_PREMIUM", "/v1/premium/buy")
-    payload = {"query": recipient, "months": months, "show_sender": False}
+    payload = {"query": str(recipient), "months": str(months), "show_sender": "0"}
+    return await _post_json(url, payload)
+
+async def buy_ton(recipient: str, amount: float) -> Dict[str, Any]:
+    url = url = _ep("FRAGMENT_EP_TON", "/v1/ads/topup")
+    payload = {"query": str(recipient), "amount": str(amount), "show_sender": "0"}
     return await _post_json(url, payload)
 
 # async def get_prices():
@@ -100,3 +106,7 @@ async def get_premium_price() -> float:
     amount = row["duration"].split(" ")[0]
     price = row["price_ton"]
     return float(price) / float(amount)
+
+async def get_ton_price() -> int:
+    converted = await convert_ton_to_rub(1)
+    return int(converted) + (0 if converted.is_integer else 1)

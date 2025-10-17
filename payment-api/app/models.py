@@ -68,7 +68,7 @@ class PricingRule(Base):
 class Referral(Base):
     __tablename__ = "referrals"
     id: Mapped[int] = mapped_column(primary_key=True)
-    refferer_id: Mapped[int | None] = mapped_column(BigInteger)
+    referrer_id: Mapped[int | None] = mapped_column(BigInteger)
     referee_id: Mapped[int | None] = mapped_column(BigInteger)
     created_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=False))
 

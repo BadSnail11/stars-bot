@@ -4,7 +4,7 @@ from sqlalchemy import update, func, cast
 from sqlalchemy.dialects.postgresql import JSONB
 
 from ..models import Order
-from .fragment import buy_stars, buy_premium
+from .fragment import buy_stars, buy_premium, buy_ton
 
 async def _save_result(session: AsyncSession, order_id: int, ok: bool, text: str, result_json: dict | None):
     # message — для пользователя; gateway_payload.result — сырой ответ API
@@ -52,6 +52,14 @@ async def fulfill_order(session: AsyncSession, order: Order) -> Tuple[bool, str]
                 raise ValueError("empty months")
             data = await buy_premium(recipient=recipient, months=months)
             msg = f"👑 Premium активирован на {months} мес. для {recipient}"
+            await _save_result(session, order.id, True, msg, data)
+            return True, msg
+        elif order.type == "ton":
+            amount = int(order.amount or 0)
+            if amount <= 0:
+                raise ValueError("empty ton")
+            data = await buy_ton(recipient=recipient, amount=amount)
+            msg = f"Зачислено {amount} TON для {recipient}"
             await _save_result(session, order.id, True, msg, data)
             return True, msg
 

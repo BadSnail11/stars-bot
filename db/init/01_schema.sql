@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS orders (
   user_id BIGINT REFERENCES users(id),
   username TEXT,                     -- username покупателя (снимок)
   recipient TEXT,                    -- получатель (для чеков/подарков)
-  type VARCHAR(16) CHECK (type IN ('stars','premium')),
+  type VARCHAR(16) CHECK (type IN ('stars','premium', 'ton')),
   amount BIGINT,                     -- кол-во звёзд или месяцев премки
   price DECIMAL(18,2),               -- сколько оплатил (в выбранной валюте)
   income DECIMAL(18,2),              -- наша прибыль (нетто)
@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS broadcasts (
 -- прайсинг/наценки (тон/звезды в моменте + ручные цены RUB/USDT)
 CREATE TABLE IF NOT EXISTS pricing_rules (
   id BIGSERIAL PRIMARY KEY,
-  item_type VARCHAR(16) CHECK (item_type IN ('stars','premium')),
+  item_type VARCHAR(16) CHECK (item_type IN ('stars','premium', 'ton')),
   mode VARCHAR(16) CHECK (mode IN ('dynamic','manual')) NOT NULL,
   markup_percent DECIMAL(8,3),       -- для dynamic (TON)
   manual_price DECIMAL(18,6),        -- для manual (RUB/USDT)

@@ -8,7 +8,4 @@ INSERT INTO pricing_rules (item_type, mode, manual_price, currency, bot_id)
 VALUES ('premium', 'manual', 1, 'RUB', 1);
 
 INSERT INTO pricing_rules (item_type, mode, manual_price, currency, bot_id)
-VALUES ('stars', 'manual', 1, 'TON', 1);
-
-INSERT INTO pricing_rules (item_type, mode, manual_price, currency, bot_id)
-VALUES ('premium', 'manual', 1, 'TON', 1);
+VALUES ('ton', 'manual', 1, 'RUB', 1);
