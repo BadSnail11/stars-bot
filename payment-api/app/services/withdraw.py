@@ -46,7 +46,7 @@ async def request_withdrawal(s: AsyncSession, user_id: int, to_address: str, amo
     await _add_user_balance(s, user_id, delta=-amount)
 
     # создаём выплату в Heleket
-    response = await create_withdraw(order_id=gen_order_id, to_address=str(to_address), amount=str(amount), network=str(network))
+    response = await create_withdraw(order_id=gen_order_id, to_address=str(to_address), amount=str(int(amount)), network=str(network))
 
     await repo.set_processing(wid, str(wid), response)
     await s.commit()
