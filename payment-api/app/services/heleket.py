@@ -69,6 +69,8 @@ async def create_invoice(
     if url_callback:payload["url_callback"] = url_callback
     if lifetime:    payload["lifetime"] = lifetime
 
+    print(payload)
+
     # Можно дополнительно ограничить список доступных монет:
     payer_cur = os.getenv("HELEKET_PAYER_CURRENCY")
     payer_net = os.getenv("HELEKET_PAYER_NETWORK")
