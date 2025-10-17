@@ -30,9 +30,9 @@ async def _post_json(path: str, payload: dict, is_payout: bool = False) -> dict:
     }
     print(is_payout)
     print(headers)
-    print(json.dumps(payload))
+    print(payload)
     async with aiohttp.ClientSession() as http:
-        async with http.post(url, headers=headers, json=json.dumps(payload), timeout=30) as r:
+        async with http.post(url, headers=headers, data=payload, timeout=30) as r:
             text = await r.text()
             r.raise_for_status()
             return json.loads(text)
