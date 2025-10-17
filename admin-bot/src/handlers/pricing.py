@@ -34,9 +34,9 @@ async def _render_prices(m: types.Message, s, bot_key: int, edit: bool = False):
             "Текущие manual-цены (RUB):\n"
             f"• звезда: {stars.manual_price if stars else '—'}\n"
             f"• премиум/мес: {prem.manual_price if prem else '—'}\n\n"
-            f"• ТОН: {ton.manual_price if prem else '—'}\n\n"s
+            f"• ТОН: {ton.manual_price if prem else '—'}\n\n"
             f"• звезда (наценка TON): {stars_m.markup_percent if stars else '—'}%\n"
-            f"• премиум/мес (наценка TON): {prem_m.markup_percent if prem else '—'}%\n\n",
+            f"• премиум/мес (наценка TON): {prem_m.markup_percent if prem else '—'}%\n\n"
             f"• ТОН (наценка TON): {ton_m.markup_percent if prem else '—'}%\n\n",
             parse_mode="HTML",
             reply_markup=pricing_kb()
@@ -46,8 +46,10 @@ async def _render_prices(m: types.Message, s, bot_key: int, edit: bool = False):
             "Текущие manual-цены (RUB):\n"
             f"• звезда: {stars.manual_price if stars else '—'}\n"
             f"• премиум/мес: {prem.manual_price if prem else '—'}\n\n"
+            f"• ТОН: {ton.manual_price if prem else '—'}\n\n"
             f"• звезда (наценка TON): {stars_m.markup_percent if stars else '—'}%\n"
-            f"• премиум/мес (наценка TON): {prem_m.markup_percent if prem else '—'}%\n\n",
+            f"• премиум/мес (наценка TON): {prem_m.markup_percent if prem else '—'}%\n\n"
+            f"• ТОН (наценка TON): {ton_m.markup_percent if prem else '—'}%\n\n",
             parse_mode="HTML",
             reply_markup=pricing_kb()
         )
