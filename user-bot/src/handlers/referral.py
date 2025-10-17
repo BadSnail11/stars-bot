@@ -61,7 +61,7 @@ def get_router(session_maker: async_sessionmaker) -> Router:
         
         async with session_maker() as s:
             users = UsersRepo(s)
-            user = await users.get_by_tg_id(m.from_user.id)
+            user = await users.get_by_tg_id(m.chat.id)
             balance = user.balance
 
         print(balance)
