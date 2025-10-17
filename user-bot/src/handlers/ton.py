@@ -25,9 +25,9 @@ BTN_GIFT = "buy_ton_gift"
 BTN_CANCEL = "buy_ton_cancel"
 
 
-BTN_PAY_SBP   = "pay_sbp"
-BTN_PAY_TON   = "pay_ton"
-BTN_PAY_OTHER = "pay_other"
+BTN_PAY_SBP   = "pay_ton_sbp"
+BTN_PAY_TON   = "pay_ton_ton"
+BTN_PAY_OTHER = "pay_ton_other"
 
 def get_router(session_maker: async_sessionmaker) -> Router:
     router = Router(name="ton")
