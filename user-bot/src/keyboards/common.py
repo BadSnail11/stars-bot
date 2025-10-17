@@ -90,3 +90,17 @@ def payment_kb(url: str):
     kb.button(text="⬅️ В меню", callback_data="nav_back")
     return kb.as_markup()
 
+
+def network_kb() -> types.InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+    kb.row(*[types.InlineKeyboardButton(text="POLYGON", callback_data="NET_POLYGON"), types.InlineKeyboardButton(text="BSC", callback_data="NET_BSC")])
+    kb.row(*[types.InlineKeyboardButton(text="TRON", callback_data="NET_TRON"), types.InlineKeyboardButton(text="ETH", callback_data="NET_ETH")])
+    kb.row(*[types.InlineKeyboardButton(text="TON", callback_data="NET_TON"), types.InlineKeyboardButton(text="SOL", callback_data="NET_SOL")])
+    kb.row(*[types.InlineKeyboardButton(text="ARBITRUM", callback_data="NET_ARBITRUM"), types.InlineKeyboardButton(text="AVALANCHE", callback_data="NET_AVALANCHE")])
+    kb.row(types.InlineKeyboardButton(text="В меню", callback_data="nav_back"))
+    return kb.as_markup()
+
+def accept_kb() -> types.InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+    kb.row(*[types.InlineKeyboardButton(text="Подтвердит", callback_data="accept"), types.InlineKeyboardButton(text="В меню", callback_data="nav_back")])
+    return kb.as_markup()

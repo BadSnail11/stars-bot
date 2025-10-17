@@ -43,3 +43,15 @@ async def get_order_status(order_id: int) -> dict:
         async with http.get(f"{PAYMENT_API}/orders/{order_id}", timeout=15) as r:
             r.raise_for_status()
             return await r.json()
+        
+async def create_withdraw(user_id: int, to_address: str, amount: float, net: str):
+    body = {
+        "user_id": user_id, 
+        "to_address": to_address,
+        "amount": amount,
+        "network": net
+    }
+    async with aiohttp.ClientSession() as http:
+        async with http.post(f"{PAYMENT_API}/withdraw", json=body, timeout=30) as r:
+            r.raise_for_status()
+            return await r.json()

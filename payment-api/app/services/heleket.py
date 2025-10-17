@@ -115,7 +115,7 @@ async def wait_invoice_paid(order_id: str, user_tg_id, *, poll_interval: float =
     return None
 
 
-async def create_withdraw(order_id: str, to_address: str, amount: str) -> dict:
+async def create_withdraw(order_id: str, to_address: str, amount: str, network: str) -> dict:
     """
     Создать выплату. Возвращает (provider_id, payload).
     """
@@ -124,7 +124,7 @@ async def create_withdraw(order_id: str, to_address: str, amount: str) -> dict:
             "order_id": order_id,
             "address": to_address,
             "is_subtract": False,
-            "network": "TRON"
+            "network": network
         }
     return await _post_json("/v1/payout", body, True)
 

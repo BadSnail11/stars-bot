@@ -20,7 +20,7 @@ async def _get_user_balance(s: AsyncSession, user_id: int) -> Decimal:
 async def _add_user_balance(s: AsyncSession, user_id: int, delta: Decimal):
     await s.execute(text("UPDATE users SET balance = balance + :d WHERE id=:id"), {"id": user_id, "d": str(delta)})
 
-async def request_withdrawal(s: AsyncSession, user_id: int, to_address: str, amount: Decimal) -> dict:
+async def request_withdrawal(s: AsyncSession, user_id: int, to_address: str, amount: Decimal, network: str) -> dict:
     """
     Основной сценарий:
     1) валидация суммы
@@ -30,8 +30,8 @@ async def request_withdrawal(s: AsyncSession, user_id: int, to_address: str, amo
     5) списываем amount с баланса (reserve)
     6) создаём выплату в Heleket -> status processing
     """
-    if amount < MIN: raise WithdrawalLogicError(f"Минимальная сумма: {MIN} TON")
-    if amount > MAX: raise WithdrawalLogicError(f"Превышен лимит: {MAX} TON")
+    if amount < MIN: raise WithdrawalLogicError(f"Минимальная сумма: {MIN} USDT")
+    if amount > MAX: raise WithdrawalLogicError(f"Превышен лимит: {MAX} USDT")
 
     # баланс
     balance = await _get_user_balance(s, user_id)
@@ -39,12 +39,12 @@ async def request_withdrawal(s: AsyncSession, user_id: int, to_address: str, amo
         raise WithdrawalLogicError("Недостаточно средств на балансе")
 
     repo = WithdrawalsRepo(s)
-    wid = await repo.create(user_id=user_id, amount=float(amount), to_address=to_address)
+    wid = await repo.create(user_id=user_id, amount=float(amount), to_address=to_address, currency="USDT")
 
     await _add_user_balance(s, user_id, delta=-amount)
 
     # создаём выплату в Heleket
-    response = await create_withdraw(order_id=str(wid), to_address=to_address, amount=str(amount))
+    response = await create_withdraw(order_id=str(wid), to_address=to_address, amount=str(amount), network=network)
 
     await repo.set_processing(wid, str(wid), response)
     await s.commit()
