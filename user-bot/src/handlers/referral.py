@@ -56,6 +56,7 @@ def get_router(session_maker: async_sessionmaker) -> Router:
 
     @router.callback_query(F.data == "withdraw")
     async def withdraw(cb: types.CallbackQuery, state: FSMContext):
+        print(1)
         m = cb.message
         me = await m.bot.get_me()
         
