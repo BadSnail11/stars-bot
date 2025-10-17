@@ -253,7 +253,7 @@ async def create_order(payload: CreateOrderRequest):
             amount = int(payload.amount)
             if payload.payment_method == "TON":
                 # price_per_star_ton = await get_star_price_in_ton(session, bot_id)
-                ton_price = get_ton_price_in_ton(session, bot_id)
+                ton_price = await get_ton_price_in_ton(session, bot_id)
                 total_ton = calc_ton_for_ton(amount, ton_price)
                 wallet = os.getenv("TON_WALLET")
                 if not wallet:
