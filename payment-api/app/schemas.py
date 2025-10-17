@@ -2,7 +2,7 @@ from pydantic import BaseModel, Field
 from typing import Literal, Optional
 
 PaymentMethod = Literal["TON", "SBP", "CRYPTO_OTHER"]
-OrderType = Literal["stars", "premium"]
+OrderType = Literal["stars", "premium", "ton"]
 
 class CreateOrderRequest(BaseModel):
     user_tg_id: int
