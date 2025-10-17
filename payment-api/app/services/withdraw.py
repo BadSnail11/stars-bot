@@ -16,7 +16,7 @@ async def _get_user_balance(s: AsyncSession, user_id: int) -> Decimal:
     row = (await s.execute(text("SELECT balance FROM users WHERE id=:id"), {"id": user_id})).first()
     if not row: raise WithdrawalLogicError("user not found")
     return Decimal(row[0] or 0)
- 5.000000 U
+
 async def _add_user_balance(s: AsyncSession, user_id: int, delta: Decimal):
     await s.execute(text("UPDATE users SET balance = balance + :d WHERE id=:id"), {"id": user_id, "d": str(delta)})
 
