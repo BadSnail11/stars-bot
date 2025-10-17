@@ -28,6 +28,7 @@ def product_kb():
     kb = InlineKeyboardBuilder()
     kb.row(types.InlineKeyboardButton(text="Звезды", callback_data="change_stars_pricing"))
     kb.row(types.InlineKeyboardButton(text="Премиум", callback_data="change_premium_pricing"))
+    kb.row(types.InlineKeyboardButton(text="ТОН", callback_data="change_ton_pricing"))
     kb.row(types.InlineKeyboardButton(text="Назад", callback_data="back"))
     return kb.as_markup()
 
@@ -35,6 +36,7 @@ def product_markup_kb():
     kb = InlineKeyboardBuilder()
     kb.row(types.InlineKeyboardButton(text="Звезды", callback_data="change_stars_markup"))
     kb.row(types.InlineKeyboardButton(text="Премиум", callback_data="change_premium_markup"))
+    kb.row(types.InlineKeyboardButton(text="ТОН", callback_data="change_ton_markup"))
     kb.row(types.InlineKeyboardButton(text="Назад", callback_data="back"))
     return kb.as_markup()
 
