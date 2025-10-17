@@ -24,6 +24,7 @@ def _sign_payload(payload_obj: dict, is_payout: bool = False) -> str:
 
     # Создаем подпись MD5
     sign = hashlib.md5(f"{encoded_data}{key}".encode('utf-8')).hexdigest()
+    print(sign)
     return sign
 
 async def _post_json(path: str, payload: dict, is_payout: bool = False) -> dict:
