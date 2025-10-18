@@ -13,7 +13,7 @@ COMMENT = "Payment via TonTools"
 WALLET_VERSION = "w5"  # варианты: "v5r1", "v4r2", "v3r2". Можно оставить None — TonTools подберёт сам.
 
 def _mnemonics() -> list[str]:
-    raw = os.getenv("FRAGMENT_MNEMONICS", "")
+    raw = os.getenv("TON_MNEMONICS", "")
     return [w.strip() for w in raw.replace(",", " ").split() if w.strip()]
 
 async def create_withdraw_request(amount: float, address: str):
