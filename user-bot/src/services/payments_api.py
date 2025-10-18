@@ -44,7 +44,7 @@ async def get_order_status(order_id: int) -> dict:
             r.raise_for_status()
             return await r.json()
         
-async def create_withdraw(user_id: int, to_address: str, amount: float, net: str):
+async def create_withdraw(user_id: int, to_address: str, amount: float):
     body = {
         "user_id": user_id, 
         "to_address": to_address,

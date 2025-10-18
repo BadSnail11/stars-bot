@@ -24,13 +24,15 @@ async def create_withdraw_request(amount: float, address: str):
 
     client = ToncenterV2Client(api_key=TON_API_KEY)
 
+    print(_mnemonics())
+
     wallet, public_key, private_key, mnemonic = WalletV5R1.from_mnemonic(client=client, mnemonic=_mnemonics())
 
     # Инициализация кошелька. Если версия не указана, TonTools попытается определить подходящую.
     
     tx = await wallet.transfer(
         destination=address,
-        amount=amount,
+        amount=amount
     )
     # Проверим адрес и баланс (необязательно)
     # balance = await wallet.get_balance()

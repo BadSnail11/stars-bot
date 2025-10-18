@@ -129,9 +129,11 @@ def get_router(session_maker: async_sessionmaker) -> Router:
 
         print(m.chat.id, address, amount, net)
 
-        res = await create_withdraw(int(user_id), address, amount, net)
+        res = await create_withdraw(int(user_id), address, amount)
 
-        await m.edit_text("Введите Адрес своего кошелька (ВАЖНО, не допустите ошибку в адресе кошелька, иначе средства поступят не на тот адрес БЕЗВОЗВРАТНО):")
+        tx = res["tx"]
+
+        await m.edit_text("Запрос на вывод был отправлен. Ожидайте поступления средств", reply_markup=back_nav_kb())
         await state.clear()
 
     return router

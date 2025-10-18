@@ -61,7 +61,7 @@ async def get_ton_to_usd_price():
         print(f"Ошибка при запросе к API: {e}")
         return None
 
-async def convert_ton_to_usd(amount):
+async def convert_ton_to_usd(amount) -> float| None:
     """Конвертирует количество TON в USD"""
     price = await get_ton_to_usd_price()
     if price is not None:
@@ -79,3 +79,7 @@ async def convert_ton_to_rub(amount: float) -> float:
 async def convert_rub_to_usd(amount: float) -> float:
     c = CurrencyConverter()
     return float(c.convert(amount, 'RUB', 'USD'))
+
+async def convert_usd_to_ton(amount: float) -> float:
+    one_ton = await convert_ton_to_usd(1)
+    return amount / one_ton
