@@ -7,14 +7,16 @@ from TonTools import TonCenterClient, Wallet
 
 # --- Настройки (замените на свои) ---
 TON_API_KEY = os.getenv("TON_API_KEY", "ВАШ_TONCENTER_API_KEY")
-MNEMONIC = os.getenv("TON_MNEMONIC", "ваша мнемоническая фраза здесь через пробел")
+# MNEMONIC = os.getenv("TON_MNEMONIC", "ваша мнемоническая фраза здесь через пробел")
 TON_WALLET = os.getenv("TON_WALLET", "")
 COMMENT = "Payment via TonTools"
 WALLET_VERSION = "w5"  # варианты: "v5r1", "v4r2", "v3r2". Можно оставить None — TonTools подберёт сам.
 
+def _mnemonics() -> list[str]:
+    raw = os.getenv("FRAGMENT_MNEMONICS", "")
+    return [w.strip() for w in raw.replace(",", " ").split() if w.strip()]
+
 async def create_withdraw_request(amount: float, address: str):
-    if "ваша мнемоническая" in MNEMONIC:
-        raise SystemExit("Укажите MNEMONIC (лучше через переменные окружения).")
 
     client = TonCenterClient(
         key=TON_API_KEY,  # автоматически выберет URL TonCenter для тестнета/мейннета
@@ -22,7 +24,7 @@ async def create_withdraw_request(amount: float, address: str):
 
     # Инициализация кошелька. Если версия не указана, TonTools попытается определить подходящую.
     wallet = Wallet(
-        mnemonics=MNEMONIC.split(" "),
+        mnemonics=_mnemonics(),
         address=TON_WALLET,
         provider=client,
         version=WALLET_VERSION,
