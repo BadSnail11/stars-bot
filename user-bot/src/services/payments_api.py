@@ -49,7 +49,7 @@ async def create_withdraw(user_id: int, to_address: str, amount: float, net: str
         "user_id": user_id, 
         "to_address": to_address,
         "amount": amount,
-        "network": net
+        # "network": net
     }
     async with aiohttp.ClientSession() as http:
         async with http.post(f"{PAYMENT_API}/withdraw", json=body, timeout=30) as r:
