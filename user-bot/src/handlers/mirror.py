@@ -34,8 +34,9 @@ def get_router(session_maker: async_sessionmaker) -> Router:
             users = UsersRepo(session)
             userbots = UserBotsRepo(session)
 
-            # bot = await userbots.get_by_tg_bot_id(cb.bot.id)
-            # me = await users.upsert_from_telegram(m.from_user, bot.id)
+            bot = await userbots.get_by_tg_bot_id(cb.bot.id)
+            user = await users.get_by_tg_id(m.chat.id)
+            me = await users.upsert_from_telegram(user, bot.id)
 
             bots = UserBotsRepo(session)
             existing = await bots.get_by_owner(cb.message.chat.id)
