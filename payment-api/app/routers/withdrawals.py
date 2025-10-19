@@ -45,7 +45,7 @@ async def check_withdraw(s: AsyncSession, wid: int, tx_hash: str, ton_amount: fl
     success = await check_withdraw_status(tx_hash)
 
     repo = WithdrawalsRepo(s)
-    await repo.mark_status(wid, 'sent' if success else 'failed', payload={"success": success, "in_ton": ton_amount, "tx_hash": tx_hash})
+    await repo.mark_status(wid, 'sent' if success else 'failed', payload={"success": str(success), "in_ton": ton_amount, "tx_hash": tx_hash})
 
     users = UsersRepo(s)
     if not success:

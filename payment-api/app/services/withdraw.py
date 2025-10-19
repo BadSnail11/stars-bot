@@ -7,6 +7,7 @@ import os
 from tonutils.wallet.data import WalletV5Data
 from tonutils.client.toncenter import ToncenterV2Client
 from tonutils.wallet import WalletV5R1
+from tonutils.utils import normalize_hash
 import asyncio
 
 
@@ -44,7 +45,8 @@ async def check_withdraw_status(tx_hash: str) -> bool:
     status = False
 
     for tx in txs:
-        if tx.prev_trans_hash.hex() == tx_hash.lower():
+        hs = normalize_hash(tx.in_msg).hex()
+        if hs == tx_hash.lower():
             status = not tx.description.aborted
 
     return status
