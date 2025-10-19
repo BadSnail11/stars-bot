@@ -84,6 +84,12 @@ def back_nav_kb():
     kb.button(text="⬅️ В меню", callback_data=f"nav_back")
     return kb.as_markup()
 
+
+def back_new_kb():
+    kb = InlineKeyboardBuilder()
+    kb.button(text="⬅️ В меню", callback_data=f"new_back")
+    return kb.as_markup()
+
 def payment_kb(url: str):
     kb = InlineKeyboardBuilder()
     kb.button(text="Оплатить", url=url)

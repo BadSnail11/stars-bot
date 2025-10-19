@@ -20,6 +20,10 @@ def get_router(session_maker: async_sessionmaker) -> Router:
     async def nav_back(cb: types.CallbackQuery):
         await cb.message.edit_text("Главное меню:", reply_markup=main_menu_kb())
 
+    @router.callback_query(F.data == "new_back")
+    async def new_back(cb: types.CallbackQuery):
+        await cb.message.answer("Главное меню:", reply_markup=main_menu_kb())
+
     # @router.message(F.text.in_(["⭐ Купить звёзды", "💎 Купить TON", "👑 Премиум", "🧾 История заказов", "👥 Реферальная программа", "🤖 Создать свой бот"]))
     # async def placeholders(m: types.Message):
     #     await m.answer("Этот раздел появится на следующем шаге разработки.", reply_markup=main_menu_kb())

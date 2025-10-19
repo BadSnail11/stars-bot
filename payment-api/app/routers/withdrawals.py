@@ -4,9 +4,11 @@ from decimal import Decimal
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from ..services.converter import convert_usd_to_ton
+import asyncio
 
 from ..db import SessionLocal
-from ..services.withdraw import create_withdraw_request
+from ..services.withdraw import create_withdraw_request, check_withdraw_status
+from ..repositories.withdrawals import WithdrawalsRepo
 
 router = APIRouter(tags=["wallet"])
 
@@ -19,17 +21,25 @@ class WithdrawIn(BaseModel):
 @router.post("/withdraw")
 async def create_withdraw(req: WithdrawIn):
     async with SessionLocal() as db:
+        repo = WithdrawalsRepo(db)
         try:
-            # print(int(req.user_id), req.to_address, Decimal(req.amount))
-            # result = await request_withdrawal(db, user_id=int(req.user_id), to_address=req.to_address, amount=Decimal(str(req.amount)), network=req.network)
             ton_amount = await convert_usd_to_ton(float(req.amount))
-            print(ton_amount)
-            result = await create_withdraw_request(0.1, req.to_address)
+            result = await create_withdraw_request(ton_amount, req.to_address)
+            wid = await repo.create(req.user_id, req.amount, req.to_address)
+            asyncio.create_task(check_withdraw(db, wid, str(result), ton_amount))
             return {"ok": True, "tx": result}
         # except WithdrawalLogicError as e:
         #     raise HTTPException(status_code=400, detail=str(e))
         except Exception as e:
             raise HTTPException(status_code=502, detail=str(e))
+        
+async def check_withdraw(s: AsyncSession, wid: int, tx_hash: str, ton_amount: float):
+    await asyncio.sleep(300)
+
+    success = await check_withdraw_status(tx_hash)
+
+    repo = WithdrawalsRepo(s)
+    await repo.mark_status(wid, 'sent' if success else 'failed', payload={"success": success, "in_ton": ton_amount, "tx_hash": tx_hash})
 
 
 # @router.post("/heleket/callback")

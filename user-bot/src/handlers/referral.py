@@ -3,7 +3,7 @@ from aiogram import Router, types, F
 # from aiogram.filters import Text
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from ..services.referral import build_ref_link
-from ..keyboards.common import main_menu_kb, back_nav_kb, network_kb, accept_kb  # если у тебя есть главное меню
+from ..keyboards.common import main_menu_kb, back_nav_kb, accept_kb, back_new_kb  # если у тебя есть главное меню
 from ..repositories.users import UsersRepo
 import os
 from sqlalchemy.ext.asyncio import async_sessionmaker
@@ -17,7 +17,6 @@ _min_balace = int(os.getenv("MIN_BALANCE", "5"))
 class Referral(StatesGroup):
     enter_amount = State()
     enter_wallet = State()
-    enter_net = State()
     enter_address = State()
     accept_withdraw = State()
 
@@ -43,7 +42,7 @@ def get_router(session_maker: async_sessionmaker) -> Router:
         text = (
             "👥 <b>Реферальная программа</b>\n\n"
             "Приглашайте друзей по вашей ссылке и получайте 40% прибыли от их оплат.\n\n"
-            f"Ваш баланс: {user.balance} USD\n\n"
+            f"Ваш баланс: {user.balance} USDT\n\n"
             f"Ваша ссылка:\n<code>{link}</code>"
         )
         await m.edit_text(text, reply_markup=markup)
@@ -67,10 +66,10 @@ def get_router(session_maker: async_sessionmaker) -> Router:
         print(balance)
         
         if balance < _min_balace:
-            await m.edit_text(text=f"Вывод доступен от {_min_balace} USD", reply_markup=back_nav_kb())
+            await m.edit_text(text=f"Вывод доступен от {_min_balace} USDT", reply_markup=back_nav_kb())
             return
 
-        await m.edit_text(text=f"Введите количество USD на вывод (не меньше {_min_balace} USD):", reply_markup=back_nav_kb())
+        await m.edit_text(text=f"Введите количество USD на вывод (не меньше {_min_balace} USDT):", reply_markup=back_nav_kb())
         await state.set_state(Referral.enter_amount)
 
     @router.message(Referral.enter_amount)
@@ -89,16 +88,16 @@ def get_router(session_maker: async_sessionmaker) -> Router:
         
         await state.update_data(amount=amount)
         
-        await m.answer(text=f"Выберите сеть:", reply_markup=network_kb())
-        # await context.set_state(Referral.enter_network)
-    
-    @router.callback_query(F.data.split("_")[0] == "NET")
-    async def choose_net(cb: types.CallbackQuery, state: FSMContext):
-        net = cb.data.split("_")[1]
-        await state.update_data(net=net)
-        m = cb.message
-        await m.edit_text("Введите Адрес своего кошелька (ВАЖНО, не допустите ошибку в адресе кошелька, иначе средства поступят не на тот адрес БЕЗВОЗВРАТНО):", reply_markup=back_nav_kb())
+        await m.answer(text=f"Введите Адрес вашего TON кошелька (ВАЖНО, не допустите ошибку в адресе кошелька, иначе средства поступят не на тот адрес БЕЗВОЗВРАТНО):", reply_markup=back_new_kb())
         await state.set_state(Referral.enter_address)
+    
+    # @router.callback_query(F.data.split("_")[0] == "NET")
+    # async def choose_net(cb: types.CallbackQuery, state: FSMContext):
+    #     net = cb.data.split("_")[1]
+    #     await state.update_data(net=net)
+    #     m = cb.message
+    #     await m.edit_text("Введите Адрес своего кошелька (ВАЖНО, не допустите ошибку в адресе кошелька, иначе средства поступят не на тот адрес БЕЗВОЗВРАТНО):", reply_markup=back_nav_kb())
+    #     await state.set_state(Referral.enter_address)
 
     @router.message(Referral.enter_address)
     async def enter_address(m: types.Message, state: FSMContext):
@@ -106,11 +105,10 @@ def get_router(session_maker: async_sessionmaker) -> Router:
         await state.update_data(address=address)
         data = await state.get_data()
         amount = data.get("amount")
-        net = data.get("net")
         await m.answer(text=f"Подтвердите ваши данные:\n"
                  f"Сумма: {amount} USTD\n"
-                 f"Сеть: {net}\n"
-                 f"Адрес: {address}", reply_markup=accept_kb())
+                 f"Адрес: {address}\n\n"
+                 f"Внимание!!! Сумма придет в TON по нашему курсу", reply_markup=accept_kb())
         await state.set_state(Referral.accept_withdraw)
 
     @router.callback_query(F.data == "accept")
@@ -132,9 +130,10 @@ def get_router(session_maker: async_sessionmaker) -> Router:
         try:
             res = await create_withdraw(int(user_id), address, amount)
             tx = res["tx"]
-            await m.edit_text("Запрос на вывод был отправлен. Ожидайте поступления средств", reply_markup=back_nav_kb())
+            print(tx)
+            await m.edit_text("Запрос на вывод был отправлен. Ожидайте поступления средств", reply_markup=back_new_kb())
         except:
-            await m.edit_text("Извините, в процессе вывода произошла ошибка. Попробуйте позже", reply_markup=back_nav_kb())
+            await m.edit_text("Извините, в процессе вывода произошла ошибка. Попробуйте позже", reply_markup=back_new_kb())
 
         await state.clear()
 
