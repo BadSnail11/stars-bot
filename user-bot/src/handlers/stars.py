@@ -50,7 +50,7 @@ def get_router(session_maker: async_sessionmaker) -> Router:
     # Себе
     @router.callback_query(F.data == BTN_SELF)
     async def choose_self(cb: types.CallbackQuery, state: FSMContext):
-        user = (await cb.bot.get_chat_member(cb.chat.id, cb.chat.id)).user
+        user = (await cb.bot.get_chat_member(cb.message.chat.id, cb.message.chat.id)).user
         if user.username:
             await state.set_state(BuyStars.enter_me)
             await cb.message.edit_text("У вас скрыт юзернейм, введите вручную:", reply_markup=back_nav_kb())
