@@ -81,8 +81,18 @@ def get_router(session_maker: async_sessionmaker) -> Router:
             await state.clear()
             return
         
+        async with session_maker() as s:
+            users = UsersRepo(s)
+            user = await users.get_by_tg_id(m.chat.id)
+            balance = user.balance
+        
         if amount < _min_balace:
-            await m.answer(f"Сумма должна быть больше {_min_balace}", reply_markup=back_nav_kb())
+            await m.answer(f"Сумма должна быть больше {_min_balace} USDT", reply_markup=back_nav_kb())
+            await state.clear()
+            return
+        
+        if amount > balance:
+            await m.answer(f"Сумма должна быть не больше вашего баланса: {balace} USDT", reply_markup=back_nav_kb())
             await state.clear()
             return
         

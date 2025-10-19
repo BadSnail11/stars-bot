@@ -4,7 +4,7 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 from src.db import SessionLocal
 from src.repositories.pricing import PricingRepo
-from src.utils.owner_scope import resolve_owner_and_bot_key
+from src.utils.owner_scope import resolve_owner_and_bot_key, get_main_bot_id
 
 from ..keyboards.common import pricing_kb, nav_to_menu, product_kb, product_markup_kb
 
@@ -114,14 +114,23 @@ async def pricing_set_stars(m: types.Message, state: FSMContext):
     try:
         price = float(m.text.replace(",", "."))
     except:
-        m.edit_text("Неправильный ввод, попробуйте еще раз:", nav_to_menu())
+        await m.answer("Неправильный ввод, попробуйте еще раз:", reply_markup=nav_to_menu())
+        return
     # price = float(price_s.replace(",", "."))
     async with SessionLocal() as s:
         _, bot_key = await resolve_owner_and_bot_key(s, m.chat.id)
+
         # if not bot_key:
         #     await m.answer("Зеркальный бот не найден.")
         #     return
         repo = PricingRepo(s)
+
+        main_bot_key = await get_main_bot_id(s)
+        main_price = (await repo.get_active_manual("stars", "RUB", main_bot_key)).manual_price
+        if bot_key != main_bot_key and main_price > price:
+            await m.edit_text("Цена не может быть ниже, чем у основного бота!")
+            return
+
         stars = await repo.get_active_manual("stars", "RUB", bot_key)
         if stars:
             await repo.change_manual("stars", "RUB", price, bot_key)
@@ -136,7 +145,8 @@ async def pricing_set_premium(m: types.Message, state: FSMContext):
     try:
         price = float(m.text.replace(",", "."))
     except:
-        m.edit_text("Неправильный ввод, попробуйте еще раз:", nav_to_menu())
+        await m.answer("Неправильный ввод, попробуйте еще раз:", reply_markup=nav_to_menu())
+        return
     # price = float(price_s.replace(",", "."))
     async with SessionLocal() as s:
         _, bot_key = await resolve_owner_and_bot_key(s, m.chat.id)
@@ -144,6 +154,13 @@ async def pricing_set_premium(m: types.Message, state: FSMContext):
         #     await m.answer("Зеркальный бот не найден.")
         #     return
         repo = PricingRepo(s)
+
+        main_bot_key = await get_main_bot_id(s)
+        main_price = (await repo.get_active_manual("premium", "RUB", main_bot_key)).manual_price
+        if bot_key != main_bot_key and main_price > price:
+            await m.edit_text("Цена не может быть ниже, чем у основного бота!")
+            return
+
         stars = await repo.get_active_manual("premium", "RUB", bot_key)
         if stars:
             await repo.change_manual("premium", "RUB", price, bot_key)
@@ -158,7 +175,8 @@ async def pricing_set_ton(m: types.Message, state: FSMContext):
     try:
         price = float(m.text.replace(",", "."))
     except:
-        m.edit_text("Неправильный ввод, попробуйте еще раз:", nav_to_menu())
+        await m.answer("Неправильный ввод, попробуйте еще раз:", reply_markup=nav_to_menu())
+        return
     # price = float(price_s.replace(",", "."))
     async with SessionLocal() as s:
         _, bot_key = await resolve_owner_and_bot_key(s, m.chat.id)
@@ -166,6 +184,13 @@ async def pricing_set_ton(m: types.Message, state: FSMContext):
         #     await m.answer("Зеркальный бот не найден.")
         #     return
         repo = PricingRepo(s)
+
+        main_bot_key = await get_main_bot_id(s)
+        main_price = (await repo.get_active_manual("ton", "RUB", main_bot_key)).manual_price
+        if bot_key != main_bot_key and main_price > price:
+            await m.edit_text("Цена не может быть ниже, чем у основного бота!")
+            return
+
         stars = await repo.get_active_manual("ton", "RUB", bot_key)
         if stars:
             await repo.change_manual("ton", "RUB", price, bot_key)
@@ -226,7 +251,8 @@ async def markup_set_stars(m: types.Message, state: FSMContext):
     try:
         markup = float(m.text.replace(",", "."))
     except:
-        m.edit_text("Неправильный ввод, попробуйте еще раз:", nav_to_menu())
+        await m.answer("Неправильный ввод, попробуйте еще раз:", reply_markup=nav_to_menu())
+        return
     # price = float(price_s.replace(",", "."))
     async with SessionLocal() as s:
         _, bot_key = await resolve_owner_and_bot_key(s, m.chat.id)
@@ -234,6 +260,13 @@ async def markup_set_stars(m: types.Message, state: FSMContext):
         #     await m.answer("Зеркальный бот не найден.")
         #     return
         repo = PricingRepo(s)
+
+        main_bot_key = await get_main_bot_id(s)
+        main_markup = (await repo.get_active_dynamic("stars", "TON", main_bot_key)).markup_percent
+        if bot_key != main_bot_key and main_markup > markup:
+            await m.edit_text("Наценка не может быть ниже, чем у основного бота!")
+            return
+
         await repo.set_active_markup("stars", "TON", bot_key, markup)
         await _render_prices(m, s, bot_key)
     await state.clear()
@@ -243,7 +276,8 @@ async def markup_set_premium(m: types.Message, state: FSMContext):
     try:
         markup = float(m.text.replace(",", "."))
     except:
-        m.edit_text("Неправильный ввод, попробуйте еще раз:", nav_to_menu())
+        await m.answer("Неправильный ввод, попробуйте еще раз:", reply_markup=nav_to_menu())
+        return
     # price = float(price_s.replace(",", "."))
     async with SessionLocal() as s:
         _, bot_key = await resolve_owner_and_bot_key(s, m.chat.id)
@@ -251,6 +285,13 @@ async def markup_set_premium(m: types.Message, state: FSMContext):
         #     await m.answer("Зеркальный бот не найден.")
         #     return
         repo = PricingRepo(s)
+
+        main_bot_key = await get_main_bot_id(s)
+        main_markup = (await repo.get_active_dynamic("premium", "TON", main_bot_key)).markup_percent
+        if bot_key != main_bot_key and main_markup > markup:
+            await m.edit_text("Наценка не может быть ниже, чем у основного бота!")
+            return
+
         await repo.set_active_markup("premium", "TON", bot_key, markup)
         await _render_prices(m, s, bot_key)
     await state.clear()
@@ -260,7 +301,8 @@ async def markup_set_stars(m: types.Message, state: FSMContext):
     try:
         markup = float(m.text.replace(",", "."))
     except:
-        m.edit_text("Неправильный ввод, попробуйте еще раз:", nav_to_menu())
+        await m.answer("Неправильный ввод, попробуйте еще раз:", reply_markup=nav_to_menu())
+        return
     # price = float(price_s.replace(",", "."))
     async with SessionLocal() as s:
         _, bot_key = await resolve_owner_and_bot_key(s, m.chat.id)
@@ -268,6 +310,13 @@ async def markup_set_stars(m: types.Message, state: FSMContext):
         #     await m.answer("Зеркальный бот не найден.")
         #     return
         repo = PricingRepo(s)
+
+        main_bot_key = await get_main_bot_id(s)
+        main_markup = (await repo.get_active_dynamic("ton", "TON", main_bot_key)).markup_percent
+        if bot_key != main_bot_key and main_markup > markup:
+            await m.edit_text("Наценка не может быть ниже, чем у основного бота!")
+            return
+
         await repo.set_active_markup("ton", "TON", bot_key, markup)
         await _render_prices(m, s, bot_key)
     await state.clear()

@@ -1,28 +1,54 @@
-from typing import Optional
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from ..models import PricingRule
+from sqlalchemy import select, insert, update
+from typing import Optional
+from src.models import PricingRule
 
 class PricingRepo:
-    def __init__(self, session: AsyncSession):
-        self.session = session
+    def __init__(self, s: AsyncSession):
+        self.s = s
 
-    async def get_active_manual(self, item_type: str, currency: str) -> Optional[PricingRule]:
-        q = select(PricingRule).where(
-            PricingRule.item_type == item_type,
-            PricingRule.mode == "manual", # выставляется вручную
-            PricingRule.currency == currency,
-            PricingRule.is_active == True,  # noqa: E712
-        ).order_by(PricingRule.id.desc())
-        res = await self.session.execute(q)
-        return res.scalars().first()
-
-    async def get_active_dynamic(self, item_type: str, currency: str) -> Optional[PricingRule]:
-        q = select(PricingRule).where(
+    async def get_active_manual(self, item_type: str, currency: str, bot_id: int) -> Optional[PricingRule]:
+        q = await self.s.execute(
+            select(PricingRule)
+            .where(
+                PricingRule.item_type == item_type,
+                PricingRule.currency == currency,
+                PricingRule.is_active.is_(True),
+                PricingRule.mode == "manual",
+                PricingRule.bot_id == bot_id
+            )
+            .order_by(PricingRule.created_at.desc())
+        )
+        return q.scalars().first()
+    
+    async def get_active_dynamic(self, item_type: str, currency: str, bot_id: int) -> Optional[PricingRule]:
+        q = await self.s.execute(select(PricingRule).where(
             PricingRule.item_type == item_type,
             PricingRule.mode == "dynamic", # выставляется автоматически
             PricingRule.currency == currency,
-            PricingRule.is_active == True,  # noqa: E712
-        ).order_by(PricingRule.id.desc())
-        res = await self.session.execute(q)
-        return res.scalars().first()
+            PricingRule.is_active == True,  # noqa: E712,
+            PricingRule.bot_id == bot_id
+        ).order_by(PricingRule.id.desc()))
+        # res = await self.session.execute(q)
+        return q.scalars().first()
+
+    async def upsert_manual(self, item_type: str, currency: str, price: float, bot_id: int):
+        await self.s.execute(
+            insert(PricingRule).values(
+                item_type=item_type, currency=currency, mode="manual",
+                manual_price=price, is_active=True, bot_id=bot_id
+            )
+        )
+        await self.s.commit()
+
+    async def change_manual(self, item_type: str, currency: str, price: float, bot_id: int):
+        await self.s.execute(
+            update(PricingRule).where(PricingRule.bot_id == bot_id, PricingRule.currency == currency, PricingRule.item_type == item_type).values(manual_price=price)
+        )
+        await self.s.commit()
+
+    async def set_active_markup(self, item_type: str, currency: str, bot_id: int, markup: float):
+        if await self.get_active_dynamic(item_type=item_type, currency=currency, bot_id=bot_id):
+            q = update(PricingRule).where(PricingRule.item_type == item_type, PricingRule.currency == currency, PricingRule.bot_id==bot_id).values(markup_percent=markup)
+            await self.s.execute(q)
+        await self.s.commit()

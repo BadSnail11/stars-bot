@@ -7,15 +7,19 @@ import re, asyncio
 
 from ..repositories.users import UsersRepo
 from ..repositories.user_bots import UserBotsRepo
+from ..repositories.pricing import PricingRepo
 from ..services.polling_manager import PollingManager
 
 from ..keyboards.common import back_nav_kb
 
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
+import os
 
 
 TOKEN_RE = re.compile(r"^\d+:[A-Za-z0-9_\-]{35,}$")
+
+MAIN_BOT = os.getenv("MAIN_BOT", "")
 
 class MirrorStates(StatesGroup):
     waiting_token = State()
@@ -76,6 +80,7 @@ def get_router(session_maker: async_sessionmaker) -> Router:
         async with session_maker() as session:
             users = UsersRepo(session)
             userbots = UserBotsRepo(session)
+            pricing = PricingRepo(session)
 
             bot = await userbots.get_by_tg_bot_id(m.bot.id)
             u = await users.upsert_from_telegram(m.from_user, bot.id)
@@ -95,6 +100,12 @@ def get_router(session_maker: async_sessionmaker) -> Router:
                 pass
 
             created = await bots.create(owner_user_id=u.id, token=token, username=bot_username, tg_bot_id=tg_bot_id)
+
+            main_bot_key = (await userbots.get_by_tg_bot_id(int(MAIN_BOT))).id
+            main_price_stars = (await pricing.get_active_manual("stars", "RUB", main_bot_key)).manual_price
+            main_price_premium = (await pricing.get_active_manual("premium", "RUB", main_bot_key)).manual_price
+            await pricing.upsert_manual("stars", "RUB", float(main_price_stars), main_bot_key)
+            await pricing.upsert_manual("premium", "RUB", float(main_price_premium), main_bot_key)
 
         bot = Bot(token=token, default=DefaultBotProperties(parse_mode=ParseMode.HTML)) 
         
