@@ -29,7 +29,8 @@ async def create_withdraw_request(amount: float, address: str) -> str:
     
     tx = await wallet.transfer(
         destination=address,
-        amount=amount
+        amount=amount,
+        body="From stars shop"
     )
 
     return tx

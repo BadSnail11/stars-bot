@@ -13,6 +13,7 @@ class WithdrawalsRepo:
             RETURNING id
         """)
         rid = (await self.s.execute(q, {"uid": user_id, "amt": amount, "addr": to_address, "cur": currency})).scalar_one()
+        await self.s.commit()
         return rid
 
     async def set_processing(self, wid: int, provider_id: str, payload: Dict[str, Any], fee: Optional[float] = None):
@@ -35,6 +36,7 @@ class WithdrawalsRepo:
              WHERE id=:wid
         """)
         await self.s.execute(q, {"wid": wid, "st": status, "payload": payload})
+        await self.s.commit()
 
     async def get_by_provider(self, provider_id: str) -> Optional[int]:
         q = text("SELECT id FROM withdrawals WHERE provider_id=:pid LIMIT 1")

@@ -27,7 +27,7 @@ async def create_withdraw(req: WithdrawIn):
             print(ton_amount)
             ton_amount = 0.101
             result = await create_withdraw_request(ton_amount, req.to_address)
-            wid = await repo.create(req.user_id, req.amount, req.to_address)
+            wid = await repo.create(req.user_id, req.amount, req.to_address, "USDT")
             asyncio.create_task(check_withdraw(db, wid, str(result), ton_amount))
             return {"ok": True, "tx": result}
         # except WithdrawalLogicError as e:
