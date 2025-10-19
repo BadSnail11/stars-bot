@@ -8,8 +8,6 @@ from .services.pricing import update_ton_price
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # startup
-    _ = await get_redis()
 
     task = asyncio.create_task(update_ton_price())
 
@@ -19,8 +17,6 @@ async def lifespan(app: FastAPI):
         await task
     except asyncio.CancelledError:
         pass
-    # shutdown
-    await close_redis()
 
 app = FastAPI(title="Payment API", lifespan=lifespan)
 app.include_router(orders.router)

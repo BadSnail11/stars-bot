@@ -1,7 +1,6 @@
 import os, aiohttp
 from typing import Any, Dict
-# from ..services.converter import convert_ton_to_rub
-# from .fragment_auth import auth
+
 
 def _base() -> str:
     return (os.getenv("FRAGMENT_BASE") or "https://api.fragment-api.com").rstrip("/")
