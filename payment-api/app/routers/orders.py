@@ -117,7 +117,7 @@ async def create_order(payload: CreateOrderRequest):
                     currency="RUB",
                     order_id=str(order.id),   # важно: уникальный,
                     user_tg_id=str(payload.user_tg_id),
-                    to_currency="USDT",
+                    # to_currency="USDT",
                     # network=os.getenv("HELEKET_PAYER_NETWORK","tron"),
                     # url_return=os.getenv("HELEKET_RETURN_URL"),
                     # url_success=os.getenv("HELEKET_SUCCESS_URL"),
@@ -218,7 +218,7 @@ async def create_order(payload: CreateOrderRequest):
                     amount=f"{amount_rub:.2f}",
                     currency="RUB",
                     order_id=str(order.id),
-                    to_currency="USDT",
+                    # to_currency="USDT",
                     user_tg_id=user.tg_user_id,
                     # network=os.getenv("HELEKET_PAYER_NETWORK","tron"),
                     # url_return=os.getenv("HELEKET_RETURN_URL"),
@@ -324,7 +324,7 @@ async def create_order(payload: CreateOrderRequest):
                     currency="RUB",
                     order_id=str(order.id),   # важно: уникальный,
                     user_tg_id=str(payload.user_tg_id),
-                    to_currency="USDT",
+                    # to_currency="USDT",
                     # network=os.getenv("HELEKET_PAYER_NETWORK","tron"),
                     # url_return=os.getenv("HELEKET_RETURN_URL"),
                     # url_success=os.getenv("HELEKET_SUCCESS_URL"),
@@ -410,7 +410,7 @@ async def _background_heleket_check(order_id: int, user_tg_id: int, bot_id: int)
 
 
 
-@router.post("/test")
-async def create_order_test():
-    # return await _on_paid(57, "19bc4910dbd5a0345fb39216c1134fbb6a6dd3ecbe0ec7f2682e5fb74afee67c", 1)
-    return await _on_paid(30, "19bc4910dbd5a0345fb39216c1134fbb6a6dd3ecbe0ec7f2682e5fb74afee67c", 12)
+# @router.post("/test")
+# async def create_order_test():
+#     # return await _on_paid(57, "19bc4910dbd5a0345fb39216c1134fbb6a6dd3ecbe0ec7f2682e5fb74afee67c", 1)
+#     return await _on_paid(30, "19bc4910dbd5a0345fb39216c1134fbb6a6dd3ecbe0ec7f2682e5fb74afee67c", 12)

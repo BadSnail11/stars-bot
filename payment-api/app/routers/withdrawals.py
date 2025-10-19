@@ -26,7 +26,7 @@ async def create_withdraw(req: WithdrawIn):
         users = UsersRepo(db)
         try:
             ton_amount = await convert_usd_to_ton(float(req.amount))
-            ton_amount = 0.101
+            # ton_amount = 0.101
             await users.add_balance(req.user_id, -1 * req.amount)
             result = await create_withdraw_request(ton_amount, req.to_address)
             wid = await repo.create(req.user_id, req.amount, req.to_address, "USDT")
