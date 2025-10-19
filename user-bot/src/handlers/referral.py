@@ -128,12 +128,14 @@ def get_router(session_maker: async_sessionmaker) -> Router:
         user_id = user.id
 
         print(m.chat.id, address, amount, net)
+        
+        try:
+            res = await create_withdraw(int(user_id), address, amount)
+            tx = res["tx"]
+            await m.edit_text("Запрос на вывод был отправлен. Ожидайте поступления средств", reply_markup=back_nav_kb())
+        except:
+            await m.edit_text("Извините, в процессе вывода произошла ошибка. Попробуйте позже", reply_markup=back_nav_kb())
 
-        res = await create_withdraw(int(user_id), address, amount)
-
-        tx = res["tx"]
-
-        await m.edit_text("Запрос на вывод был отправлен. Ожидайте поступления средств", reply_markup=back_nav_kb())
         await state.clear()
 
     return router
