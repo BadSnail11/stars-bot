@@ -58,7 +58,6 @@ async def get_ton_to_usd_price():
         return ton_price
         
     except requests.exceptions.RequestException as e:
-        print(f"Ошибка при запросе к API: {e}")
         return None
 
 async def convert_ton_to_usd(amount) -> float| None:

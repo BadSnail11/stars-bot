@@ -18,7 +18,6 @@ def _sign_payload(payload_obj: dict, is_payout: bool = False) -> str:
 
     # Создаем подпись MD5
     sign = hashlib.md5(f"{encoded_data}{key}".encode('utf-8')).hexdigest()
-    # print(sign)
     return sign
 
 async def _post_json(path: str, payload: dict, is_payout: bool = False) -> dict:
@@ -28,9 +27,6 @@ async def _post_json(path: str, payload: dict, is_payout: bool = False) -> dict:
         "sign": _sign_payload(payload, is_payout),
         "Content-Type": "application/json",
     }
-    print(is_payout)
-    print(headers)
-    print(payload)
     async with aiohttp.ClientSession() as http:
         async with http.post(url, headers=headers, json=payload, timeout=30) as r:
             text = await r.text()
@@ -66,8 +62,6 @@ async def create_invoice(
     if url_success: payload["url_success"] = url_success
     if url_callback:payload["url_callback"] = url_callback
     if lifetime:    payload["lifetime"] = lifetime
-
-    print(payload)
 
     # Можно дополнительно ограничить список доступных монет:
     payer_cur = os.getenv("HELEKET_PAYER_CURRENCY")

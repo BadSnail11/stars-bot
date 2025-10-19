@@ -84,16 +84,12 @@ def calc_rub_for_ton(amount: float, price_per_ton: Decimal):
 
 
 async def update_ton_price():
-    print(1)
     stars_price, premium_price = await get_stars_price(), await get_premium_price()
-    print(stars_price, premium_price)
     async with SessionLocal() as session:
         repo = PricingRepo(session)
         user_bots = UserBotsRepo(session)
         bots = await user_bots.get_all()
-        print(bots)
         for bot in bots:
-            print(bot.id)
             await repo.set_active("stars", "TON", stars_price, bot.id)
             await repo.set_active("premium", "TON", premium_price, bot.id)
             await repo.set_active("ton", "TON", 1.0, bot.id)

@@ -82,12 +82,10 @@ async def get_stars_price() -> float:
     url = _ep("FRAGMENT_CHECK_STARS", "/v1/stars/price")
     # payload = {"query": recipient, "months": months, "show_sender": False}
     data = await _get(url)
-    # print(data)
     row = dict()
     for el in data:
         if el["stars"] == "50 Stars":
             row = el
-    # print(row)
     amount = row["stars"].split(" ")[0]
     price = row["price_ton"]
     return float(price) / float(amount)
@@ -97,7 +95,6 @@ async def get_premium_price() -> float:
     url = _ep("FRAGMENT_CHECK_PREMIUM", "/v1/premium/price")
     # payload = {"query": recipient, "months": months, "show_sender": False}
     data = await _get(url)
-    # print(data)
     row = dict()
     for el in data:
         if el["duration"] == "3 months":

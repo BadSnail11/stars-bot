@@ -378,15 +378,12 @@ async def _on_paid(order_id: int, tx_hash: str | None, bot_id: int):
     async with SessionLocal() as session:
         orders = OrdersRepo(session)
         order = await orders.get_by_id(order_id)
-        print("order:", order)
         if not order or order.status == "paid":
-            print(2)
             return
         await orders.mark_paid(order_id, tx_hash or "n/a", income=None)
 
         # Рефералка
         fresh = await orders.get_by_id(order_id)
-        print(fresh.id)
         from ..services.referral_accrual import accrue_referral_reward
         await accrue_referral_reward(session, fresh, bot_id)
 
