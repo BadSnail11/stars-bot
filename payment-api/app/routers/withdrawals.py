@@ -9,6 +9,7 @@ import asyncio
 from ..db import SessionLocal
 from ..services.withdraw import create_withdraw_request, check_withdraw_status
 from ..repositories.withdrawals import WithdrawalsRepo
+from ..repositories.users import UsersRepo
 
 router = APIRouter(tags=["wallet"])
 
@@ -22,26 +23,33 @@ class WithdrawIn(BaseModel):
 async def create_withdraw(req: WithdrawIn):
     async with SessionLocal() as db:
         repo = WithdrawalsRepo(db)
+        users = UsersRepo(db)
         try:
             ton_amount = await convert_usd_to_ton(float(req.amount))
             print(ton_amount)
             ton_amount = 0.101
+            await users.add_balance(req.user_id, -1 * req.amount)
             result = await create_withdraw_request(ton_amount, req.to_address)
             wid = await repo.create(req.user_id, req.amount, req.to_address, "USDT")
-            asyncio.create_task(check_withdraw(db, wid, str(result), ton_amount))
+            print(wid)
+            asyncio.create_task(check_withdraw(db, wid, str(result), ton_amount, req.user_id, req.amount))
             return {"ok": True, "tx": result}
         # except WithdrawalLogicError as e:
         #     raise HTTPException(status_code=400, detail=str(e))
         except Exception as e:
             raise HTTPException(status_code=502, detail=str(e))
         
-async def check_withdraw(s: AsyncSession, wid: int, tx_hash: str, ton_amount: float):
+async def check_withdraw(s: AsyncSession, wid: int, tx_hash: str, ton_amount: float, uid: int, amount: float):
     await asyncio.sleep(300)
 
     success = await check_withdraw_status(tx_hash)
 
     repo = WithdrawalsRepo(s)
     await repo.mark_status(wid, 'sent' if success else 'failed', payload={"success": success, "in_ton": ton_amount, "tx_hash": tx_hash})
+
+    users = UsersRepo(s)
+    if not success:
+        await users.add_balance(uid, amount)
 
 
 # @router.post("/heleket/callback")

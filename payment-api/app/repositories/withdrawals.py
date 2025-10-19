@@ -31,7 +31,7 @@ class WithdrawalsRepo:
         q = text("""
             UPDATE withdrawals
                SET status=:st,
-                   provider_payload = coalesce(provider_payload,'{}'::jsonb) || :payload::jsonb,
+                   provider_payload = coalesce(provider_payload,'{}'::jsonb) || CAST(:payload AS jsonb),
                    processed_at = CASE WHEN :st IN ('sent','failed','canceled') THEN now() ELSE processed_at END
              WHERE id=:wid
         """)
