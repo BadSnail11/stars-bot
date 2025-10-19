@@ -16,6 +16,7 @@ from ..services.order_poll import poll_until_paid
 
 class BuyStars(StatesGroup):
     choose_target = State()
+    enter_me = State()
     enter_recipient = State()
     enter_qty = State()
     choose_payment = State()
@@ -49,9 +50,25 @@ def get_router(session_maker: async_sessionmaker) -> Router:
     # Себе
     @router.callback_query(F.data == BTN_SELF)
     async def choose_self(cb: types.CallbackQuery, state: FSMContext):
+        user = (await cb.bot.get_chat_member(cb.chat.id, cb.chat.id)).user
+        if user.username:
+            await state.set_state(BuyStars.enter_me)
+            await cb.message.edit_text("У вас скрыт юзернейм, введите вручную:", reply_markup=back_nav_kb())
+            return
         await state.update_data(recipient=None)
         await state.set_state(BuyStars.enter_qty)
         await cb.message.edit_text("Сколько звёзд купить? (минимум 50)", reply_markup=back_nav_kb())
+
+    @router.message(BuyStars.enter_me)
+    async def get_me(m: types.Message, state: FSMContext):
+        text = (m.text or "").strip()
+        if not text:
+            await m.answer("Пустое значение. Укажите получателя, например, @username", reply_markup=cancel_kb(BTN_CANCEL))
+            return
+        await state.update_data(recipient=text)
+        await state.set_state(BuyStars.enter_qty)
+        await m.answer("Сколько звёзд купить? (минимум 50)", reply_markup=cancel_kb(BTN_CANCEL))
+
     
     # Подарок
     @router.callback_query(F.data == BTN_GIFT)
