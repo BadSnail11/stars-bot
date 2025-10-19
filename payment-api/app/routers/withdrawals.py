@@ -24,7 +24,7 @@ async def create_withdraw(req: WithdrawIn):
             # result = await request_withdrawal(db, user_id=int(req.user_id), to_address=req.to_address, amount=Decimal(str(req.amount)), network=req.network)
             ton_amount = await convert_usd_to_ton(float(req.amount))
             print(ton_amount)
-            result = await create_withdraw_request(ton_amount, req.to_address)
+            result = await create_withdraw_request(0.1, req.to_address)
             return {"ok": True, "tx": result}
         # except WithdrawalLogicError as e:
         #     raise HTTPException(status_code=400, detail=str(e))
