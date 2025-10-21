@@ -31,7 +31,7 @@ class StatsStates(StatesGroup):
 
 # ----------------- Date Helpers -----------------
 def _now_utc() -> datetime:
-    return datetime.utcnow()
+    return datetime.now(timezone.utc)
 
 def parse_date(date_str: str) -> Optional[datetime]:
     """Парсит дату в форматах: DD.MM.YYYY, DD-MM-YYYY, YYYY-MM-DD"""
@@ -197,7 +197,17 @@ async def process_end_date(message: types.Message, state: FSMContext):
     end_date = end_date.replace(hour=23, minute=59, second=59)
     
     await state.update_data(end_date=end_date)
-    await generate_orders_report(message, state)
+    
+    # Определяем тип отчета и генерируем его
+    data = await state.get_data()
+    mode = data.get('mode', '')
+    
+    if mode == 'st_users':
+        await generate_users_report(message, state)
+    elif mode.startswith('st_do_user_'):
+        await generate_user_orders_report(message, state)
+    else:
+        await generate_orders_report(message, state)
 
 async def generate_orders_report(message: types.Message, state: FSMContext):
     data = await state.get_data()
@@ -221,10 +231,14 @@ async def generate_orders_report(message: types.Message, state: FSMContext):
             Order.status, Order.recipient, Order.created_at, Order.paid_at
         ).join(User, User.id == Order.user_id).where(User.bot_id == bot_id)
 
+        # Преобразуем даты в UTC naive для сравнения с базой данных
+        start_date_naive = start_date.replace(tzinfo=None)
+        end_date_naive = end_date.replace(tzinfo=None)
+
         if only_paid:
-            q = q.where(Order.status == "paid", Order.paid_at >= start_date, Order.paid_at <= end_date)
+            q = q.where(Order.status == "paid", Order.paid_at >= start_date_naive, Order.paid_at <= end_date_naive)
         else:
-            q = q.where(Order.created_at >= start_date, Order.created_at <= end_date)
+            q = q.where(Order.created_at >= start_date_naive, Order.created_at <= end_date_naive)
 
         q = q.order_by(
             Order.paid_at.desc().nullslast(),
@@ -274,6 +288,51 @@ async def st_users_pick_period(cb: types.CallbackQuery, state: FSMContext):
     )
     await cb.message.edit_text(text, reply_markup=get_period_keyboard("st_home"))
     await cb.answer()
+
+async def generate_users_report(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    start_date = data['start_date']
+    end_date = data['end_date']
+    
+    # Преобразуем даты в UTC naive для сравнения с базой данных
+    start_date_naive = start_date.replace(tzinfo=None)
+    end_date_naive = end_date.replace(tzinfo=None)
+    
+    async with SessionLocal() as s:
+        bot_id = await _bot_id_by_admin(s, message.chat.id)
+        if not bot_id:
+            await message.answer("Зеркальный бот не найден.", reply_markup=nav_to_menu())
+            await state.clear()
+            return
+
+        q = select(
+            User.id, User.tg_user_id, User.username, User.first_name, User.last_name,
+            User.lang_code, User.balance, User.accepted_offer_at, User.is_blocked, User.created_at
+        ).where(User.bot_id == bot_id, User.created_at >= start_date_naive, User.created_at <= end_date_naive).order_by(User.created_at.desc())
+        rows = (await s.execute(q)).all()
+
+    headers = ["ID","TG UserID","Username","First Name","Last Name","Lang",
+               "Balance","AcceptedOfferAt","IsBlocked","CreatedAt"]
+    data_rows = []
+    for r in rows:
+        ao = r.accepted_offer_at.strftime("%Y-%m-%d %H:%M:%S") if r.accepted_offer_at else ""
+        cr = r.created_at.strftime("%Y-%m-%d %H:%M:%S") if r.created_at else ""
+        data_rows.append((
+            r.id, r.tg_user_id, r.username, r.first_name, r.last_name,
+            r.lang_code, float(r.balance or 0), ao, bool(r.is_blocked), cr
+        ))
+
+    period_str = f"{start_date.strftime('%d%m%Y')}_{end_date.strftime('%d%m%Y')}"
+    
+    xbytes = _wb_from_table(f"users_{period_str}", headers, data_rows)
+    fname = f"users_{period_str}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+    
+    await message.bot.send_document(
+        chat_id=message.chat.id,
+        document=types.BufferedInputFile(xbytes, filename=fname),
+        caption=f"👥 Пользователи за период: {format_date(start_date)} - {format_date(end_date)}"
+    )
+    await state.clear()
 
 # ----------------- 3) Заказы конкретного пользователя -----------------
 def ask_user_kb():
@@ -344,72 +403,6 @@ async def st_user_pick_period(cb: types.CallbackQuery, state: FSMContext):
     await cb.message.edit_text(text, reply_markup=get_period_keyboard("st_home"))
     await cb.answer()
 
-# Обработчики для пользователей (аналогично заказам)
-@router.message(StatsStates.waiting_period_start, F.data.regexp(r"^st_do_user_"))
-async def process_user_start_date(message: types.Message, state: FSMContext):
-    # Этот обработчик будет работать для пользовательских отчетов
-    await process_start_date(message, state)
-
-@router.message(StatsStates.waiting_period_end, F.data.regexp(r"^st_do_user_"))
-async def process_user_end_date(message: types.Message, state: FSMContext):
-    # Этот обработчик будет работать для пользовательских отчетов
-    await process_end_date(message, state)
-
-# Генерация отчетов для пользователей
-async def generate_users_report(message: types.Message, state: FSMContext):
-    data = await state.get_data()
-    start_date = data['start_date']
-    end_date = data['end_date']
-    
-    async with SessionLocal() as s:
-        bot_id = await _bot_id_by_admin(s, message.chat.id)
-        if not bot_id:
-            await message.answer("Зеркальный бот не найден.", reply_markup=nav_to_menu())
-            await state.clear()
-            return
-
-        q = select(
-            User.id, User.tg_user_id, User.username, User.first_name, User.last_name,
-            User.lang_code, User.balance, User.accepted_offer_at, User.is_blocked, User.created_at
-        ).where(User.bot_id == bot_id, User.created_at >= start_date, User.created_at <= end_date).order_by(User.created_at.desc())
-        rows = (await s.execute(q)).all()
-
-    headers = ["ID","TG UserID","Username","First Name","Last Name","Lang",
-               "Balance","AcceptedOfferAt","IsBlocked","CreatedAt"]
-    data_rows = []
-    for r in rows:
-        ao = r.accepted_offer_at.strftime("%Y-%m-%d %H:%M:%S") if r.accepted_offer_at else ""
-        cr = r.created_at.strftime("%Y-%m-%d %H:%M:%S") if r.created_at else ""
-        data_rows.append((
-            r.id, r.tg_user_id, r.username, r.first_name, r.last_name,
-            r.lang_code, float(r.balance or 0), ao, bool(r.is_blocked), cr
-        ))
-
-    period_str = f"{start_date.strftime('%d%m%Y')}_{end_date.strftime('%d%m%Y')}"
-    
-    xbytes = _wb_from_table(f"users_{period_str}", headers, data_rows)
-    fname = f"users_{period_str}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-    
-    await message.bot.send_document(
-        chat_id=message.chat.id,
-        document=types.BufferedInputFile(xbytes, filename=fname),
-        caption=f"👥 Пользователи за период: {format_date(start_date)} - {format_date(end_date)}"
-    )
-    await state.clear()
-
-# Обновленный обработчик для определения типа отчета
-@router.message(StatsStates.waiting_period_end)
-async def route_report_generation(message: types.Message, state: FSMContext):
-    data = await state.get_data()
-    mode = data.get('mode', '')
-    
-    if mode == 'st_users':
-        await generate_users_report(message, state)
-    elif mode.startswith('st_do_user_'):
-        await generate_user_orders_report(message, state)
-    else:
-        await generate_orders_report(message, state)
-
 # Генерация отчетов для заказов конкретного пользователя
 async def generate_user_orders_report(message: types.Message, state: FSMContext):
     data = await state.get_data()
@@ -419,6 +412,10 @@ async def generate_user_orders_report(message: types.Message, state: FSMContext)
     user_id = data['user_uid']
     
     only_paid = (user_mode == "paid")
+    
+    # Преобразуем даты в UTC naive для сравнения с базой данных
+    start_date_naive = start_date.replace(tzinfo=None)
+    end_date_naive = end_date.replace(tzinfo=None)
 
     async with SessionLocal() as s:
         q = select(
@@ -428,9 +425,9 @@ async def generate_user_orders_report(message: types.Message, state: FSMContext)
         ).where(Order.user_id == user_id)
 
         if only_paid:
-            q = q.where(Order.status == "paid", Order.paid_at >= start_date, Order.paid_at <= end_date)
+            q = q.where(Order.status == "paid", Order.paid_at >= start_date_naive, Order.paid_at <= end_date_naive)
         else:
-            q = q.where(Order.created_at >= start_date, Order.created_at <= end_date)
+            q = q.where(Order.created_at >= start_date_naive, Order.created_at <= end_date_naive)
 
         q = q.order_by(
             Order.paid_at.desc().nullslast(),
