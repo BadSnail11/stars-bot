@@ -30,6 +30,7 @@ def get_router(session_maker: async_sessionmaker) -> Router:
     @router.message(CommandStart())
     async def default_cmd_start(m: types.Message, u: types.User | None = None, command: CommandObject | None = None):
         await cmd_start(m=m, u=u)
+        print("qwe")
 
     @router.message(CommandStart(deep_link=True))
     async def cmd_start(m: types.Message, u: types.User | None = None, command: CommandObject | None = None):
