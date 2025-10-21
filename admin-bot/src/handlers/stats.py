@@ -7,11 +7,12 @@ from sqlalchemy.sql import nulls_last
 from typing import List, Optional, Tuple
 import io
 from datetime import datetime, timedelta, timezone
+import re
 
 from src.db import SessionLocal
 from src.models import User, Order
 from src.utils.owner_scope import resolve_owner_and_bot_key
-from ..keyboards.common import nav_to_menu, stats_root_kb, periods_kb
+from ..keyboards.common import nav_to_menu, stats_root_kb
 
 # XLSX
 from openpyxl import Workbook
@@ -25,28 +26,55 @@ class StatsStates(StatesGroup):
     idle = State()
     waiting_user_query = State()
     waiting_user_filter = State()
-    waiting_period = State()            # общий шаг "выбор периода"
-    waiting_period_user = State()       # выбор периода для заказов конкретного пользователя
-    waiting_period_orders = State()     # выбор периода для всех заказов
-    waiting_period_users = State()      # выбор периода для пользователей
+    waiting_period_start = State()      # ожидание начальной даты
+    waiting_period_end = State()        # ожидание конечной даты
 
-# ----------------- Period Helpers -----------------
+# ----------------- Date Helpers -----------------
 def _now_utc() -> datetime:
-    # return datetime.now(timezone.utc)
     return datetime.utcnow()
 
-def period_since(key: str) -> datetime:
-    now = _now_utc()
-    if key == "24h":
-        return now - timedelta(hours=24)
-    if key == "7d":
-        return now - timedelta(days=7)
-    if key == "30d":
-        return now - timedelta(days=30)
-    # fallback: 30d
-    return now - timedelta(days=30)
+def parse_date(date_str: str) -> Optional[datetime]:
+    """Парсит дату в форматах: DD.MM.YYYY, DD-MM-YYYY, YYYY-MM-DD"""
+    date_str = date_str.strip()
+    
+    # Попробовать DD.MM.YYYY
+    match = re.match(r'^(\d{1,2})\.(\d{1,2})\.(\d{4})$', date_str)
+    if match:
+        day, month, year = map(int, match.groups())
+        try:
+            return datetime(year, month, day, tzinfo=timezone.utc)
+        except ValueError:
+            return None
+    
+    # Попробовать DD-MM-YYYY
+    match = re.match(r'^(\d{1,2})-(\d{1,2})-(\d{4})$', date_str)
+    if match:
+        day, month, year = map(int, match.groups())
+        try:
+            return datetime(year, month, day, tzinfo=timezone.utc)
+        except ValueError:
+            return None
+    
+    # Попробовать YYYY-MM-DD
+    match = re.match(r'^(\d{4})-(\d{1,2})-(\d{1,2})$', date_str)
+    if match:
+        year, month, day = map(int, match.groups())
+        try:
+            return datetime(year, month, day, tzinfo=timezone.utc)
+        except ValueError:
+            return None
+    
+    return None
 
+def format_date(dt: datetime) -> str:
+    """Форматирует дату для отображения"""
+    return dt.strftime("%d.%m.%Y")
 
+def get_period_keyboard(cancel_prefix: str = "st_home"):
+    """Клавиатура для отмены ввода даты"""
+    return types.InlineKeyboardMarkup(inline_keyboard=[
+        [types.InlineKeyboardButton(text="❌ Отменить", callback_data=cancel_prefix)]
+    ])
 
 # ----------------- Root -----------------
 
@@ -105,26 +133,86 @@ async def st_orders(cb: types.CallbackQuery, state: FSMContext):
     await cb.message.edit_text("Экспорт заказов бота. Сначала выберите фильтр:", reply_markup=orders_filter_kb(scope="all"))
     await cb.answer()
 
-# — выбрали paid/all → предлагаем период
+# — выбрали paid/all → запрашиваем начальную дату
 @router.callback_query(F.data.in_(("st_do_all_paid", "st_do_all_all")))
 async def st_orders_pick_period(cb: types.CallbackQuery, state: FSMContext):
     key = "st_do_all_paid" if cb.data.endswith("_paid") else "st_do_all_all"
-    await cb.message.edit_text("Выберите период:", reply_markup=periods_kb(cbprefix=key))
+    await state.update_data(mode=key)
+    await state.set_state(StatsStates.waiting_period_start)
+    
+    text = (
+        "📅 Введите начальную дату периода (включительно)\n"
+        "Форматы: DD.MM.YYYY, DD-MM-YYYY, YYYY-MM-DD\n"
+        "Пример: 01.12.2024"
+    )
+    await cb.message.edit_text(text, reply_markup=get_period_keyboard("st_home"))
     await cb.answer()
 
-# — выбрали период → формируем XLSX
-@router.callback_query(F.data.regexp(r"^st_do_all_(paid|all)_period_(24h|7d|30d)$"))
-async def st_orders_do(cb: types.CallbackQuery, state: FSMContext):
-    m = cb.message
-    print(cb.data.split("_"))
-    _, _, _, mode, _, per = cb.data.split("_")  # all, paid|all, period, key
-    only_paid = (mode == "paid")
-    since = period_since(per)
+# — ввод начальной даты
+@router.message(StatsStates.waiting_period_start)
+async def process_start_date(message: types.Message, state: FSMContext):
+    date = parse_date(message.text)
+    if not date:
+        await message.answer(
+            "❌ Неверный формат даты. Используйте: DD.MM.YYYY, DD-MM-YYYY или YYYY-MM-DD\n"
+            "Попробуйте снова:",
+            reply_markup=get_period_keyboard("st_home")
+        )
+        return
+    
+    await state.update_data(start_date=date)
+    await state.set_state(StatsStates.waiting_period_end)
+    
+    await message.answer(
+        f"✅ Начальная дата: {format_date(date)}\n"
+        "📅 Теперь введите конечную дату периода (включительно):",
+        reply_markup=get_period_keyboard("st_home")
+    )
 
+# — ввод конечной даты
+@router.message(StatsStates.waiting_period_end)
+async def process_end_date(message: types.Message, state: FSMContext):
+    end_date = parse_date(message.text)
+    if not end_date:
+        await message.answer(
+            "❌ Неверный формат даты. Используйте: DD.MM.YYYY, DD-MM-YYYY или YYYY-MM-DD\n"
+            "Попробуйте снова:",
+            reply_markup=get_period_keyboard("st_home")
+        )
+        return
+    
+    data = await state.get_data()
+    start_date = data['start_date']
+    
+    # Проверка, что конечная дата не раньше начальной
+    if end_date < start_date:
+        await message.answer(
+            "❌ Конечная дата не может быть раньше начальной.\n"
+            "Введите конечную дату снова:",
+            reply_markup=get_period_keyboard("st_home")
+        )
+        return
+    
+    # Добавляем время 23:59:59 к конечной дате
+    end_date = end_date.replace(hour=23, minute=59, second=59)
+    
+    await state.update_data(end_date=end_date)
+    await generate_orders_report(message, state)
+
+async def generate_orders_report(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    mode = data['mode']
+    start_date = data['start_date']
+    end_date = data['end_date']
+    
+    only_paid = (mode == "st_do_all_paid")
+    
     async with SessionLocal() as s:
-        bot_id = await _bot_id_by_admin(s, m.chat.id)
+        bot_id = await _bot_id_by_admin(s, message.chat.id)
         if not bot_id:
-            await m.edit_text("Зеркальный бот не найден.", reply_markup=nav_to_menu()); await cb.answer(); return
+            await message.answer("Зеркальный бот не найден.", reply_markup=nav_to_menu())
+            await state.clear()
+            return
 
         q = select(
             Order.id.label("order_id"),
@@ -134,9 +222,9 @@ async def st_orders_do(cb: types.CallbackQuery, state: FSMContext):
         ).join(User, User.id == Order.user_id).where(User.bot_id == bot_id)
 
         if only_paid:
-            q = q.where(Order.status == "paid", Order.paid_at >= since)
+            q = q.where(Order.status == "paid", Order.paid_at >= start_date, Order.paid_at <= end_date)
         else:
-            q = q.where(Order.created_at >= since)
+            q = q.where(Order.created_at >= start_date, Order.created_at <= end_date)
 
         q = q.order_by(
             Order.paid_at.desc().nullslast(),
@@ -147,69 +235,44 @@ async def st_orders_do(cb: types.CallbackQuery, state: FSMContext):
     headers = ["OrderID","TG UserID","Username","First Name","Last Name",
                "Type","Amount","Price","Income","Currency","Status","Recipient",
                "CreatedAt","PaidAt"]
-    data = []
+    data_rows = []
     for r in rows:
         cr = r.created_at.strftime("%Y-%m-%d %H:%M:%S") if r.created_at else ""
         pr = r.paid_at.strftime("%Y-%m-%d %H:%M:%S") if r.paid_at else ""
-        data.append((
+        data_rows.append((
             r.order_id, r.tg_user_id, r.username, r.first_name, r.last_name,
             r.type, r.amount, float(r.price or 0), float(r.income or 0), r.currency,
             r.status, r.recipient, cr, pr
         ))
 
+    period_str = f"{start_date.strftime('%d%m%Y')}_{end_date.strftime('%d%m%Y')}"
+    mode_str = "paid" if only_paid else "all"
+    
     xbytes = _wb_from_table(
-        sheet_title=f"orders_{mode}_{per}",
-        headers=headers, rows=data
+        sheet_title=f"orders_{mode_str}",
+        headers=headers, rows=data_rows
     )
-    fname = f"orders_{mode}_{per}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-    await m.bot.send_document(
-        chat_id=m.chat.id,
+    fname = f"orders_{mode_str}_{period_str}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+    
+    await message.bot.send_document(
+        chat_id=message.chat.id,
         document=types.BufferedInputFile(xbytes, filename=fname),
-        caption="Готово."
+        caption=f"📊 Отчет за период: {format_date(start_date)} - {format_date(end_date)}"
     )
-    await cb.answer()
+    await state.clear()
 
 # ----------------- 2) Пользователи бота -----------------
 @router.callback_query(F.data == "st_users")
 async def st_users_pick_period(cb: types.CallbackQuery, state: FSMContext):
-    await cb.message.edit_text("Выберите период для экспорта пользователей:", reply_markup=periods_kb(cbprefix="st_do_users"))
-    await cb.answer()
-
-@router.callback_query(F.data.regexp(r"^st_do_users_period_(24h|7d|30d)$"))
-async def st_users_do(cb: types.CallbackQuery, state: FSMContext):
-    m = cb.message
-    per = cb.data.split("_")[-1]
-    since = period_since(per)
-
-    async with SessionLocal() as s:
-        bot_id = await _bot_id_by_admin(s, m.chat.id)
-        if not bot_id:
-            await m.edit_text("Зеркальный бот не найден.", reply_markup=nav_to_menu()); await cb.answer(); return
-
-        q = select(
-            User.id, User.tg_user_id, User.username, User.first_name, User.last_name,
-            User.lang_code, User.balance, User.accepted_offer_at, User.is_blocked, User.created_at
-        ).where(User.bot_id == bot_id, User.created_at >= since).order_by(User.created_at.desc())
-        rows = (await s.execute(q)).all()
-
-    headers = ["ID","TG UserID","Username","First Name","Last Name","Lang",
-               "Balance","AcceptedOfferAt","IsBlocked","CreatedAt"]
-    data = []
-    for r in rows:
-        ao = r.accepted_offer_at.strftime("%Y-%m-%d %H:%M:%S") if r.accepted_offer_at else ""
-        cr = r.created_at.strftime("%Y-%m-%d %H:%M:%S") if r.created_at else ""
-        data.append((
-            r.id, r.tg_user_id, r.username, r.first_name, r.last_name,
-            r.lang_code, float(r.balance or 0), ao, bool(r.is_blocked), cr
-        ))
-
-    xbytes = _wb_from_table(f"users_{per}", headers, data)
-    fname = f"users_{per}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-    await m.bot.send_document(
-        chat_id=m.chat.id,
-        document=types.BufferedInputFile(xbytes, filename=fname),
-        caption="Готово."
+    await state.update_data(mode="st_users")
+    await state.set_state(StatsStates.waiting_period_start)
+    
+    text = (
+        "📅 Введите начальную дату периода для экспорта пользователей (включительно)\n"
+        "Форматы: DD.MM.YYYY, DD-MM-YYYY, YYYY-MM-DD\n"
+        "Пример: 01.12.2024"
     )
+    await cb.message.edit_text(text, reply_markup=get_period_keyboard("st_home"))
     await cb.answer()
 
 # ----------------- 3) Заказы конкретного пользователя -----------------
@@ -265,23 +328,97 @@ async def st_user_pick(m: types.Message, state: FSMContext):
     )
     await state.set_state(StatsStates.waiting_user_filter)
 
-# выбрали paid/all → спросить период
+# выбрали paid/all → запрашиваем начальную дату
 @router.callback_query(StatsStates.waiting_user_filter, F.data.regexp(r"^st_do_user_(paid|all)_(\d+)$"))
 async def st_user_pick_period(cb: types.CallbackQuery, state: FSMContext):
     parts = cb.data.split("_")
     mode, uid = parts[2], parts[3]
-    await state.update_data(user_mode=mode, user_uid=int(uid))
-    await cb.message.edit_text("Выберите период:", reply_markup=periods_kb(cbprefix=f"st_do_user_{mode}", extra=uid))
+    await state.update_data(user_mode=mode, user_uid=int(uid), mode=f"st_do_user_{mode}_{uid}")
+    await state.set_state(StatsStates.waiting_period_start)
+    
+    text = (
+        "📅 Введите начальную дату периода (включительно)\n"
+        "Форматы: DD.MM.YYYY, DD-MM-YYYY, YYYY-MM-DD\n"
+        "Пример: 01.12.2024"
+    )
+    await cb.message.edit_text(text, reply_markup=get_period_keyboard("st_home"))
     await cb.answer()
 
-# выбрали период → выгружаем XLSX
-@router.callback_query(F.data.regexp(r"^st_do_user_(paid|all)_period_(24h|7d|30d)_(\d+)$"))
-async def st_user_orders_do(cb: types.CallbackQuery, state: FSMContext):
-    m = cb.message
-    _, _, _, mode, _, per, uid = cb.data.split("_")
-    only_paid = (mode == "paid")
-    user_id = int(uid)
-    since = period_since(per)
+# Обработчики для пользователей (аналогично заказам)
+@router.message(StatsStates.waiting_period_start, F.data.regexp(r"^st_do_user_"))
+async def process_user_start_date(message: types.Message, state: FSMContext):
+    # Этот обработчик будет работать для пользовательских отчетов
+    await process_start_date(message, state)
+
+@router.message(StatsStates.waiting_period_end, F.data.regexp(r"^st_do_user_"))
+async def process_user_end_date(message: types.Message, state: FSMContext):
+    # Этот обработчик будет работать для пользовательских отчетов
+    await process_end_date(message, state)
+
+# Генерация отчетов для пользователей
+async def generate_users_report(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    start_date = data['start_date']
+    end_date = data['end_date']
+    
+    async with SessionLocal() as s:
+        bot_id = await _bot_id_by_admin(s, message.chat.id)
+        if not bot_id:
+            await message.answer("Зеркальный бот не найден.", reply_markup=nav_to_menu())
+            await state.clear()
+            return
+
+        q = select(
+            User.id, User.tg_user_id, User.username, User.first_name, User.last_name,
+            User.lang_code, User.balance, User.accepted_offer_at, User.is_blocked, User.created_at
+        ).where(User.bot_id == bot_id, User.created_at >= start_date, User.created_at <= end_date).order_by(User.created_at.desc())
+        rows = (await s.execute(q)).all()
+
+    headers = ["ID","TG UserID","Username","First Name","Last Name","Lang",
+               "Balance","AcceptedOfferAt","IsBlocked","CreatedAt"]
+    data_rows = []
+    for r in rows:
+        ao = r.accepted_offer_at.strftime("%Y-%m-%d %H:%M:%S") if r.accepted_offer_at else ""
+        cr = r.created_at.strftime("%Y-%m-%d %H:%M:%S") if r.created_at else ""
+        data_rows.append((
+            r.id, r.tg_user_id, r.username, r.first_name, r.last_name,
+            r.lang_code, float(r.balance or 0), ao, bool(r.is_blocked), cr
+        ))
+
+    period_str = f"{start_date.strftime('%d%m%Y')}_{end_date.strftime('%d%m%Y')}"
+    
+    xbytes = _wb_from_table(f"users_{period_str}", headers, data_rows)
+    fname = f"users_{period_str}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+    
+    await message.bot.send_document(
+        chat_id=message.chat.id,
+        document=types.BufferedInputFile(xbytes, filename=fname),
+        caption=f"👥 Пользователи за период: {format_date(start_date)} - {format_date(end_date)}"
+    )
+    await state.clear()
+
+# Обновленный обработчик для определения типа отчета
+@router.message(StatsStates.waiting_period_end)
+async def route_report_generation(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    mode = data.get('mode', '')
+    
+    if mode == 'st_users':
+        await generate_users_report(message, state)
+    elif mode.startswith('st_do_user_'):
+        await generate_user_orders_report(message, state)
+    else:
+        await generate_orders_report(message, state)
+
+# Генерация отчетов для заказов конкретного пользователя
+async def generate_user_orders_report(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    start_date = data['start_date']
+    end_date = data['end_date']
+    user_mode = data['user_mode']
+    user_id = data['user_uid']
+    
+    only_paid = (user_mode == "paid")
 
     async with SessionLocal() as s:
         q = select(
@@ -291,9 +428,9 @@ async def st_user_orders_do(cb: types.CallbackQuery, state: FSMContext):
         ).where(Order.user_id == user_id)
 
         if only_paid:
-            q = q.where(Order.status == "paid", Order.paid_at >= since)
+            q = q.where(Order.status == "paid", Order.paid_at >= start_date, Order.paid_at <= end_date)
         else:
-            q = q.where(Order.created_at >= since)
+            q = q.where(Order.created_at >= start_date, Order.created_at <= end_date)
 
         q = q.order_by(
             Order.paid_at.desc().nullslast(),
@@ -315,15 +452,17 @@ async def st_user_orders_do(cb: types.CallbackQuery, state: FSMContext):
         ))
 
     uname = (f"@{u.username}" if (u and u.username) else f"id{u.tg_user_id if u else user_id}")
+    period_str = f"{start_date.strftime('%d%m%Y')}_{end_date.strftime('%d%m%Y')}"
+    
     xbytes = _wb_from_table(
-        sheet_title=f"user_orders_{mode}_{per}",
+        sheet_title=f"user_orders_{user_mode}",
         headers=headers, rows=data_rows
     )
-    fname = f"user_orders_{uname.replace('@','')}_{mode}_{per}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-    await m.bot.send_document(
-        chat_id=m.chat.id,
+    fname = f"user_orders_{uname.replace('@','')}_{user_mode}_{period_str}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+    
+    await message.bot.send_document(
+        chat_id=message.chat.id,
         document=types.BufferedInputFile(xbytes, filename=fname),
-        caption="Готово."
+        caption=f"📊 Заказы пользователя {uname} за период: {format_date(start_date)} - {format_date(end_date)}"
     )
     await state.clear()
-    await cb.answer()
