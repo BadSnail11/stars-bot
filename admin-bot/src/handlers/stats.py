@@ -544,7 +544,7 @@ async def generate_withdrawals_report(message: types.Message, state: FSMContext)
 
     headers = [
         "WithdrawalID","TG UserID","Username","First Name","Last Name",
-        "AmountTON","FeeTON","Currency","ToAddress","Status","ProviderID",
+        "AmountTON","Currency","ToAddress","Status","ProviderID",
         "CreatedAt","ProcessedAt"
     ]
 
@@ -554,7 +554,7 @@ async def generate_withdrawals_report(message: types.Message, state: FSMContext)
         pr = r.processed_at.strftime("%Y-%m-%d %H:%M:%S") if r.processed_at else ""
         data_rows.append((
             r.withdrawal_id, r.tg_user_id, r.username, r.first_name, r.last_name,
-            float(r.amount or 0), float(r.fee or 0) if r.fee is not None else 0.0,
+            float(r.amount or 0),
             r.currency, r.to_address, r.status, r.provider_id or "",
             cr, pr
         ))
