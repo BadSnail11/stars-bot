@@ -517,7 +517,7 @@ async def generate_withdrawals_report(message: types.Message, state: FSMContext)
         q = select(
             Withdrawal.id.label("withdrawal_id"),
             User.tg_user_id, User.username, User.first_name, User.last_name,
-            Withdrawal.amount, Withdrawal.fee, Withdrawal.currency,
+            Withdrawal.amount, Withdrawal.currency,
             Withdrawal.to_address, Withdrawal.status,
             Withdrawal.created_at, Withdrawal.processed_at
         ).join(User, User.id == Withdrawal.user_id).where(User.bot_id == bot_id)
