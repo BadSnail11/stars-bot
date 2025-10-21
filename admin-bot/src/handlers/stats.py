@@ -10,9 +10,12 @@ from datetime import datetime, timedelta, timezone
 import re
 
 from src.db import SessionLocal
-from src.models import User, Order
+from src.models import User, Order, Withdrawal  # имя класса — как в твоих моделях
+
 from src.utils.owner_scope import resolve_owner_and_bot_key
-from ..keyboards.common import nav_to_menu, stats_root_kb
+from ..keyboards.common import nav_to_menu, stats_root_kb, withdrawals_filter_kb
+
+
 
 # XLSX
 from openpyxl import Workbook
@@ -206,6 +209,8 @@ async def process_end_date(message: types.Message, state: FSMContext):
         await generate_users_report(message, state)
     elif mode.startswith('st_do_user_'):
         await generate_user_orders_report(message, state)
+    elif mode.startswith('st_do_withdrawals_'):          # ← НОВОЕ
+        await generate_withdrawals_report(message, state)
     else:
         await generate_orders_report(message, state)
 
@@ -403,6 +408,28 @@ async def st_user_pick_period(cb: types.CallbackQuery, state: FSMContext):
     await cb.message.edit_text(text, reply_markup=get_period_keyboard("st_home"))
     await cb.answer()
 
+
+@router.callback_query(F.data == "st_withdrawals")
+async def st_withdrawals(cb: types.CallbackQuery, state: FSMContext):
+    await state.set_state(StatsStates.idle)
+    await cb.message.edit_text("Экспорт выводов. Сначала выберите фильтр:", reply_markup=withdrawals_filter_kb())
+    await cb.answer()
+
+# выбрали paid/all → запрашиваем начальную дату
+@router.callback_query(F.data.in_(("st_do_withdrawals_paid", "st_do_withdrawals_all")))
+async def st_withdrawals_pick_period(cb: types.CallbackQuery, state: FSMContext):
+    key = "st_do_withdrawals_paid" if cb.data.endswith("_paid") else "st_do_withdrawals_all"
+    await state.update_data(mode=key)
+    await state.set_state(StatsStates.waiting_period_start)
+    text = (
+        "📅 Введите начальную дату периода (включительно)\n"
+        "Форматы: DD.MM.YYYY, DD-MM-YYYY, YYYY-MM-DD\n"
+        "Пример: 01.12.2024"
+    )
+    await cb.message.edit_text(text, reply_markup=get_period_keyboard("st_home"))
+    await cb.answer()
+
+
 # Генерация отчетов для заказов конкретного пользователя
 async def generate_user_orders_report(message: types.Message, state: FSMContext):
     data = await state.get_data()
@@ -461,5 +488,89 @@ async def generate_user_orders_report(message: types.Message, state: FSMContext)
         chat_id=message.chat.id,
         document=types.BufferedInputFile(xbytes, filename=fname),
         caption=f"📊 Заказы пользователя {uname} за период: {format_date(start_date)} - {format_date(end_date)}"
+    )
+    await state.clear()
+
+
+async def generate_withdrawals_report(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    mode = data['mode']  # 'st_do_withdrawals_paid' | 'st_do_withdrawals_all'
+    start_date = data['start_date']
+    end_date = data['end_date']
+
+    only_success = (mode == "st_do_withdrawals_paid")
+    # naive UTC для TIMESTAMP WITHOUT TIME ZONE
+    start_date_naive = start_date.replace(tzinfo=None)
+    end_date_naive = end_date.replace(tzinfo=None)
+
+    # статусы успеха — «sent» (по нашей договорённости)
+    SUCCESS_STATUSES = {"sent", "completed", "success"}
+
+    async with SessionLocal() as s:
+        bot_id = await _bot_id_by_admin(s, message.chat.id)
+        if not bot_id:
+            await message.answer("Зеркальный бот не найден.", reply_markup=nav_to_menu())
+            await state.clear()
+            return
+
+        # join withdrawals -> users, фильтр по users.bot_id
+        q = select(
+            Withdrawal.id.label("withdrawal_id"),
+            User.tg_user_id, User.username, User.first_name, User.last_name,
+            Withdrawal.amount, Withdrawal.fee, Withdrawal.currency,
+            Withdrawal.to_address, Withdrawal.status,
+            Withdrawal.created_at, Withdrawal.processed_at
+        ).join(User, User.id == Withdrawal.user_id).where(User.bot_id == bot_id)
+
+        if only_success:
+            # по успешным — период по processed_at
+            q = q.where(
+                Withdrawal.status.in_(SUCCESS_STATUSES),
+                Withdrawal.processed_at >= start_date_naive,
+                Withdrawal.processed_at <= end_date_naive
+            )
+        else:
+            # по всем — период по created_at
+            q = q.where(
+                Withdrawal.created_at >= start_date_naive,
+                Withdrawal.created_at <= end_date_naive
+            )
+
+        q = q.order_by(
+            Withdrawal.processed_at.desc().nullslast(),
+            Withdrawal.created_at.desc()
+        )
+        rows = (await s.execute(q)).all()
+
+    headers = [
+        "WithdrawalID","TG UserID","Username","First Name","Last Name",
+        "AmountTON","FeeTON","Currency","ToAddress","Status","ProviderID",
+        "CreatedAt","ProcessedAt"
+    ]
+
+    data_rows = []
+    for r in rows:
+        cr = r.created_at.strftime("%Y-%m-%d %H:%M:%S") if r.created_at else ""
+        pr = r.processed_at.strftime("%Y-%m-%d %H:%M:%S") if r.processed_at else ""
+        data_rows.append((
+            r.withdrawal_id, r.tg_user_id, r.username, r.first_name, r.last_name,
+            float(r.amount or 0), float(r.fee or 0) if r.fee is not None else 0.0,
+            r.currency, r.to_address, r.status, r.provider_id or "",
+            cr, pr
+        ))
+
+    period_str = f"{start_date.strftime('%d%m%Y')}_{end_date.strftime('%d%m%Y')}"
+    mode_str = "success" if only_success else "all"
+
+    xbytes = _wb_from_table(
+        sheet_title=f"withdrawals_{mode_str}",
+        headers=headers, rows=data_rows
+    )
+    fname = f"withdrawals_{mode_str}_{period_str}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+
+    await message.bot.send_document(
+        chat_id=message.chat.id,
+        document=types.BufferedInputFile(xbytes, filename=fname),
+        caption=f"💸 Выводы за период: {format_date(start_date)} - {format_date(end_date)}"
     )
     await state.clear()

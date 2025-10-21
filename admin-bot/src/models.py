@@ -84,3 +84,15 @@ class UserBot(Base):
     tg_bot_id: Mapped[int | None] = mapped_column(BigInteger)
     is_active: Mapped[bool | None] = mapped_column(Boolean, default=True)
     is_super: Mapped[bool | None] = mapped_column(Boolean, default=False)
+
+class Withdrawal(Base):
+    __tablename__ = "withdrawals"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    amount: Mapped[float | None] = mapped_column(DECIMAL(18,6))
+    currency: Mapped[str | None] = mapped_column(String(8))
+    to_address: Mapped[str | None] = mapped_column(Text())
+    status: Mapped[str | None] = mapped_column(String(32))
+    provider_payload: Mapped[dict | None] = mapped_column(JSON)
+    created_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=False))
+    processed_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=False))

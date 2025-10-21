@@ -30,7 +30,7 @@ async def create_withdraw(req: WithdrawIn):
             await users.add_balance(req.user_id, -1 * req.amount)
             result = await create_withdraw_request(ton_amount, req.to_address)
             wid = await repo.create(req.user_id, req.amount, req.to_address, "USDT")
-            # asyncio.create_task(check_withdraw(db, wid, str(result), ton_amount, req.user_id, req.amount))
+            asyncio.create_task(check_withdraw(db, wid, str(result), ton_amount, req.user_id, req.amount))
             return {"ok": True, "tx": result}
         # except WithdrawalLogicError as e:
         #     raise HTTPException(status_code=400, detail=str(e))

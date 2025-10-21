@@ -1,6 +1,9 @@
 from typing import Optional, Any, Dict
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
+from sqlalchemy import select, insert, update, func, cast, desc, nulls_last
+from sqlalchemy.dialects.postgresql import JSONB
+from ..models import Order
 
 class WithdrawalsRepo:
     def __init__(self, s: AsyncSession):
@@ -28,6 +31,7 @@ class WithdrawalsRepo:
         await self.s.execute(q, {"wid": wid, "pid": provider_id, "payload": payload, "fee": fee})
 
     async def mark_status(self, wid: int, status: str, payload: Dict[str, Any]):
+        merged = func.coalesce(Order.gateway_payload, cast({}, JSONB)).op("||")(cast(payload, JSONB))
         q = text("""
             UPDATE withdrawals
                SET status=:st,
@@ -35,7 +39,7 @@ class WithdrawalsRepo:
                    processed_at = CASE WHEN :st IN ('sent','failed','canceled') THEN now() ELSE processed_at END
              WHERE id=:wid
         """)
-        await self.s.execute(q, {"wid": wid, "st": status, "payload": payload})
+        await self.s.execute(q, {"wid": wid, "st": status, "payload": merged})
         await self.s.commit()
 
     async def get_by_provider(self, provider_id: str) -> Optional[int]:

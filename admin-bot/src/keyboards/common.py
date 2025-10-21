@@ -66,6 +66,7 @@ def stats_root_kb():
         [types.InlineKeyboardButton(text="📄 Заказы (экспорт)", callback_data="st_orders")],
         [types.InlineKeyboardButton(text="👥 Пользователи (экспорт)", callback_data="st_users")],
         [types.InlineKeyboardButton(text="🔎 Заказы пользователя (экспорт)", callback_data="st_user_orders")],
+        [types.InlineKeyboardButton(text="💸 Выводы (экспорт)", callback_data="st_withdrawals")],
         [types.InlineKeyboardButton(text="⬅️ В меню", callback_data="back_to_menu")],
     ])
 
@@ -100,6 +101,15 @@ def periods_kb(cbprefix: str, extra: Optional[str] = None):
         ],
         [
             types.InlineKeyboardButton(text="🗓 1 месяц", callback_data=f"{cbprefix}_period_30d{sfx}")
+        ],
+        [types.InlineKeyboardButton(text="⬅️ В разделы", callback_data="st_home")]
+    ])
+
+def withdrawals_filter_kb():
+    return types.InlineKeyboardMarkup(inline_keyboard=[
+        [
+            types.InlineKeyboardButton(text="✅ Только успешные", callback_data="st_do_withdrawals_paid"),
+            types.InlineKeyboardButton(text="Все", callback_data="st_do_withdrawals_all"),
         ],
         [types.InlineKeyboardButton(text="⬅️ В разделы", callback_data="st_home")]
     ])
