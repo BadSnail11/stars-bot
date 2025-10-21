@@ -27,14 +27,18 @@ OFFER_TEXT = f"Перед использованием подтвердите о
 def get_router(session_maker: async_sessionmaker) -> Router:
     router = Router(name="start")
 
-    @router.message(CommandStart())
-    async def default_cmd_start(m: types.Message, u: types.User | None = None, command: CommandObject | None = None):
-        await cmd_start(m=m, u=u)
-        print("qwe")
+    # @router.message(CommandStart())
+    # async def default_cmd_start(m: types.Message, u: types.User | None = None, command: CommandObject | None = None):
+    #     await cmd_start(m=m, u=u)
+    #     print("qwe")
 
     @router.message(CommandStart(deep_link=True))
     async def cmd_start(m: types.Message, u: types.User | None = None, command: CommandObject | None = None):
-        ref_code = command.args if command else None
+        # ref_code = command.args if command else None
+        if command:
+            ref_code = command.args
+        else:
+            ref_code = None
         async with session_maker() as session:
             users = UsersRepo(session)
             bots = UserBotsRepo(session)
