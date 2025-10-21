@@ -46,11 +46,14 @@ def get_router(session_maker: async_sessionmaker) -> Router:
 
             referrer_tg_id = int(ref_code) if (ref_code and ref_code.isdigit()) else None
             if referrer_tg_id:
+                print(referrer_tg_id)
                 # найти referrer в users по tg_user_id
                 ref_q = await session.execute(select(User).where(User.tg_user_id == referrer_tg_id))
                 ref_user = ref_q.scalar_one_or_none()
+                print(ref_user.id)
                 if ref_user:
                     refs = ReferralsRepo(session)
+                    print("yo")
                     await refs.create_link_if_absent(ref_user.id, user.id)
 
             if not user.accepted_offer_at:
