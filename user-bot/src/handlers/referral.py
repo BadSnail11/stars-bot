@@ -28,7 +28,7 @@ def get_router(session_maker: async_sessionmaker) -> Router:
         m = cb.message
         me = await m.bot.get_me()
         user = (await m.bot.get_chat_member(m.chat.id, m.chat.id)).user
-        link = build_ref_link(me.username or "", user)
+        link = build_ref_link(me.username or "", user.id)
 
         async with session_maker() as s:
             users = UsersRepo(s)
