@@ -14,7 +14,7 @@ async def get_amount(session: AsyncSession, order: Order, bot_id: int) -> float 
     if order.type == "premium":
         self_price = float(calc_ton_for_premium(order.amount, price_ton.manual_price))
 
-    price = order.price
+    price = float(order.price)
     if order.currency == "TON":
         marge = price - self_price
 
