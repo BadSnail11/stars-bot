@@ -21,6 +21,7 @@ from ..services import heleket as hk
 import os, asyncio
 from decimal import Decimal
 from ..services.heleket import wait_invoice_paid
+from ..services.ton import wait_ton_payment
 
 # from ..services.fragment import get_prices
 
@@ -410,7 +411,8 @@ async def _background_heleket_check(order_id: int, user_tg_id: int, bot_id: int)
 
 
 
-# @router.post("/test")
-# async def create_order_test():
-#     # return await _on_paid(57, "19bc4910dbd5a0345fb39216c1134fbb6a6dd3ecbe0ec7f2682e5fb74afee67c", 1)
-#     return await _on_paid(30, "19bc4910dbd5a0345fb39216c1134fbb6a6dd3ecbe0ec7f2682e5fb74afee67c", 12)
+@router.post("/test")
+async def create_order_test():
+    # return await _on_paid(57, "19bc4910dbd5a0345fb39216c1134fbb6a6dd3ecbe0ec7f2682e5fb74afee67c", 1)
+    # return await _on_paid(80, "", 12)
+    return await wait_ton_payment("UQBQ9P2q3dGs-Oj589H-7QkIdSiM3LzrYT1HMMl4BTgpjqvf", "e90f456a88c68d616c775204f8b935cf", 0.35)
