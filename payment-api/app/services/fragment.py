@@ -16,7 +16,7 @@ FRAGMENT_PUBLICKEY = os.getenv("FRAGMENT_PUBLICKEY", "")
 FRAGMENT_WALLETS = os.getenv("FRAGMENT_WALLETS", "")
 
 API_TON = os.getenv("API_TON", "")
-MNEMONIC = os.getenv("MNEMONIC", "").split()
+MNEMONIC = os.getenv("TON_MNEMONICS", "").split()
 
 def get_cookies():
     return {
