@@ -51,6 +51,7 @@ async def wait_ton_payment(wallet: str, memo: str, min_amount_ton: Decimal) -> O
     - сумма >= min_amount_ton
     Возвращает tx_hash или None по таймауту.
     """
+    print(2)
     base = (_env("TON_API_BASE") or "").strip().rstrip("/")
     api_key = (_env("TON_API_KEY") or "").strip()
     provider = _get_provider()
