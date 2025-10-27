@@ -73,7 +73,7 @@ async def wait_ton_payment(wallet: str, memo: str, min_amount_ton: Decimal) -> O
             try:
                 if provider == "toncenter":
                     url = f"{base}/getTransactions"
-                    data = await _fetch_json(http, url, headers, params={"address": wallet, "limit": 50})
+                    data = await _fetch_json(http, url, headers, params={"address": wallet, "limit": 40})
                     txs = data.get("result") or data.get("transactions") or []
                     for tx in txs:
                         tx_hash, amount, msg_text = _extract_toncenter_incoming(tx)
@@ -81,7 +81,7 @@ async def wait_ton_payment(wallet: str, memo: str, min_amount_ton: Decimal) -> O
                             return tx_hash
                 else:
                     url = f"{base}/blockchain/getTransactions"
-                    data = await _fetch_json(http, url, headers, params={"account": wallet, "limit": 50})
+                    data = await _fetch_json(http, url, headers, params={"account": wallet, "limit": 40})
                     txs = data.get("transactions") or data.get("result") or []
                     for tx in txs:
                         tx_hash, amount, msg_text = _extract_tonapi_incoming(tx)
