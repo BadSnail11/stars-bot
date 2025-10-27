@@ -30,7 +30,11 @@ async def fulfill_order(session: AsyncSession, order: Order) -> Tuple[bool, str]
     # 1) если recipient задан в заказе — отправляем туда,
     # 2) иначе берём username из заказа,
     # 3) если и там пусто — используем заглушку (ошибка).
-    recipient = (order.recipient or order.username or "").strip()
+    if order.recipient:
+        recipient = order.recipient[1::].strip()
+    else:
+        recipient = order.username.strip()
+    # recipient = (order.recipient or order.username or "").strip()
     if not recipient:
         msg = "Не указан получатель (username). Обратитесь в поддержку."
         await _save_result(session, order.id, False, msg, {"error": "missing recipient"})
