@@ -2,7 +2,7 @@ from decimal import Decimal, ROUND_UP, ROUND_HALF_UP
 from sqlalchemy.ext.asyncio import AsyncSession
 from ..repositories.pricing import PricingRepo
 from ..repositories.user_bots import UserBotsRepo
-from .fragment import get_premium_price, get_stars_price
+from .fragment import PremiumFragmentClient, StarsFragmentClient
 from ..db import SessionLocal
 import asyncio
 
@@ -84,7 +84,12 @@ def calc_rub_for_ton(amount: float, price_per_ton: Decimal):
 
 
 async def update_ton_price():
-    stars_price, premium_price = await get_stars_price(), await get_premium_price()
+    premium_client = PremiumFragmentClient()
+    stars_client = StarsFragmentClient()
+    # ton_client = TonFragmentClient()
+    # stars_price, premium_price = await get_stars_price(), await get_premium_price()
+    premium_price = await premium_client.fetch_price_per_month()
+    stars_price = await stars_client.fetch_price_per_star()
     async with SessionLocal() as session:
         repo = PricingRepo(session)
         user_bots = UserBotsRepo(session)

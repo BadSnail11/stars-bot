@@ -10,3 +10,4 @@ redis
 CurrencyConverter
 requests
 tonutils
+httpx

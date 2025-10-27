@@ -41,7 +41,7 @@ async def fulfill_order(session: AsyncSession, order: Order) -> Tuple[bool, str]
             qty = int(order.amount or 0)
             if qty <= 0:
                 raise ValueError("empty stars qty")
-            data = await buy_stars(recipient=recipient, quantity=qty)
+            data = await buy_stars(query=recipient, quantity=qty)
             msg = f"⭐ Успешно начислено: {qty} звёзд(ы) для {recipient}"
             await _save_result(session, order.id, True, msg, data)
             return True, msg
@@ -50,7 +50,7 @@ async def fulfill_order(session: AsyncSession, order: Order) -> Tuple[bool, str]
             months = int(order.amount or 0)
             if months <= 0:
                 raise ValueError("empty months")
-            data = await buy_premium(recipient=recipient, months=months)
+            data = await buy_premium(query=recipient, months=months)
             msg = f"👑 Premium активирован на {months} мес. для {recipient}"
             await _save_result(session, order.id, True, msg, data)
             return True, msg
@@ -58,7 +58,7 @@ async def fulfill_order(session: AsyncSession, order: Order) -> Tuple[bool, str]
             amount = int(order.amount or 0)
             if amount <= 0:
                 raise ValueError("empty ton")
-            data = await buy_ton(recipient=recipient, amount=amount)
+            data = await buy_ton(query=recipient, ton=amount)
             msg = f"Зачислено {amount} TON для {recipient}"
             await _save_result(session, order.id, True, msg, data)
             return True, msg
