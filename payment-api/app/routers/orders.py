@@ -394,7 +394,7 @@ async def _on_paid(order_id: int, tx_hash: str | None, bot_id: int):
         await accrue_referral_reward(session, fresh, bot_id)
 
         # Фулфилмент через Fragment
-        from ..services.fulfillment import fulfill_order
+        # from ..services.fulfillment import fulfill_order
 
         # await fulfill_order(session, fresh)
         q = await get_queue()
@@ -422,5 +422,5 @@ async def _background_heleket_check(order_id: int, user_tg_id: int, bot_id: int)
 @router.post("/test")
 async def create_order_test():
     # return await _on_paid(57, "19bc4910dbd5a0345fb39216c1134fbb6a6dd3ecbe0ec7f2682e5fb74afee67c", 1)
-    # return await _on_paid(80, "", 12)
     print(1)
+    return await _on_paid(83, "Lg/9wLFZtBbz/B29mMg8xWZAi3vBwt4xbBG2kr3tr9c=", 1)
