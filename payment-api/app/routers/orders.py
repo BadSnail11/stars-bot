@@ -22,6 +22,7 @@ import os, asyncio
 from decimal import Decimal
 from ..services.heleket import wait_invoice_paid
 from ..services.ton import wait_ton_payment
+from ..redis import get_queue
 
 # from ..services.fragment import get_prices
 
@@ -375,6 +376,10 @@ async def get_order_status(order_id: int):
 
 # ==== фоновые операции ====
 
+def task_wrapper(session, fresh):
+    asyncio.run(fulfill_order(session, fresh))
+
+
 async def _on_paid(order_id: int, tx_hash: str | None, bot_id: int):
     async with SessionLocal() as session:
         orders = OrdersRepo(session)
@@ -390,7 +395,10 @@ async def _on_paid(order_id: int, tx_hash: str | None, bot_id: int):
 
         # Фулфилмент через Fragment
         from ..services.fulfillment import fulfill_order
-        ok, msg = await fulfill_order(session, fresh)
+
+        # await fulfill_order(session, fresh)
+        q = await get_queue()
+        q.enqueue(task_wrapper, session, fresh)
 
 async def _background_ton_check(order_id: int, wallet: str, memo: str, total_ton: Decimal, bot_id: int):
     tx_hash = await wait_ton_payment(wallet, memo, total_ton)
@@ -404,7 +412,7 @@ async def _background_sbp_check(order_id: int, tx_id: str, bot_id):
 
 
 async def _background_heleket_check(order_id: int, user_tg_id: int, bot_id: int):
-    res = await wait_invoice_paid(order_id=str(order_id), user_tg_id=str(user_tg_id), poll_interval=10)
+    res = await wait_invoice_paid(order_id=str(order_id), user_tg_id=str(user_tg_id), poll_interval=60)
     if res:
         await _on_paid(order_id, res.get("txid"), bot_id)
 
@@ -416,4 +424,3 @@ async def create_order_test():
     # return await _on_paid(57, "19bc4910dbd5a0345fb39216c1134fbb6a6dd3ecbe0ec7f2682e5fb74afee67c", 1)
     # return await _on_paid(80, "", 12)
     print(1)
-    return await wait_ton_payment("UQBQ9P2q3dGs-Oj589H-7QkIdSiM3LzrYT1HMMl4BTgpjqvf", "e90f456a88c68d616c775204f8b935cf", 0.35)

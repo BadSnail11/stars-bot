@@ -1,10 +1,11 @@
 import os
 from redis.asyncio import Redis
+from rq import Queue
 
 _redis: Redis | None = None
 
 def get_redis_url() -> str:
-    return os.getenv("REDIS_URL", "redis://localhost:6379/0")
+    return os.getenv("REDIS_URL", "redis://redis/0")
 
 async def get_redis() -> Redis:
     global _redis
@@ -17,3 +18,7 @@ async def close_redis():
     if _redis is not None:
         await _redis.close()
         _redis = None
+
+async def get_queue():
+    q = Queue(connection=(await get_redis()))
+    return q

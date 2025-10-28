@@ -8,7 +8,7 @@ METHOD_SBP = int(os.getenv("PLATEGA_METHOD_SBP", "2"))  # СБП/QR
 RET_URL = os.getenv("PLATEGA_RETURN_URL", "https://example.com/ok")
 FAIL_URL = os.getenv("PLATEGA_FAILED_URL", "https://example.com/fail")
 TIMEOUT_SEC = int(os.getenv("PLATEGA_TIMEOUT_SEC", "900"))
-POLL_INTERVAL = int(os.getenv("PLATEGA_POLL_INTERVAL_SEC", "5"))
+POLL_INTERVAL = int(os.getenv("PLATEGA_POLL_INTERVAL_SEC", "60"))
 
 def _hdrs():
     return {

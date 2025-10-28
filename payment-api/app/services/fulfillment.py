@@ -2,6 +2,8 @@ from typing import Optional, Tuple
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import update, func, cast
 from sqlalchemy.dialects.postgresql import JSONB
+import asyncio
+from ..redis import get_queue
 
 from ..models import Order
 from .fragment import buy_stars, buy_premium, buy_ton
@@ -20,6 +22,9 @@ async def _save_result(session: AsyncSession, order_id: int, ok: bool, text: str
         )
     )
     await session.commit()
+
+def task_wrapper(session, order):
+    asyncio.run(fulfill_order(session, order))
 
 async def fulfill_order(session: AsyncSession, order: Order) -> Tuple[bool, str]:
     """
@@ -77,4 +82,6 @@ async def fulfill_order(session: AsyncSession, order: Order) -> Tuple[bool, str]
         err = {"error": str(e)}
         msg = f"❌ Не удалось выполнить заказ через Fragment: {e}"
         await _save_result(session, order.id, False, msg, err)
+        q = await get_queue()
+        q.enqueue(task_wrapper, session, order)
         return False, msg

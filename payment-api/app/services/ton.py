@@ -56,7 +56,7 @@ async def wait_ton_payment(wallet: str, memo: str, min_amount_ton: Decimal) -> O
     api_key = (_env("TON_API_KEY") or "").strip()
     provider = _get_provider()
     timeout_sec = int(_env("TON_CONFIRM_TIMEOUT_SEC", "900"))
-    interval = int(_env("TON_POLL_INTERVAL_SEC", "10"))
+    interval = int(_env("TON_POLL_INTERVAL_SEC", "60"))
 
     if not base:
         base = "https://toncenter.com/api/v2" if provider == "toncenter" else "https://tonapi.io/v2"
