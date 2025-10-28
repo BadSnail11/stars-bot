@@ -1,5 +1,5 @@
 import os
-from redis.asyncio import Redis
+from redis import Redis
 from rq import Queue
 
 _redis: Redis | None = None
@@ -16,7 +16,7 @@ async def get_redis() -> Redis:
 async def close_redis():
     global _redis
     if _redis is not None:
-        await _redis.close()
+        _redis.close()
         _redis = None
 
 async def get_queue():
