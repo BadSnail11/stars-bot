@@ -377,6 +377,7 @@ async def get_order_status(order_id: int):
 # ==== фоновые операции ====
 
 def task_wrapper(session, fresh):
+    print(3)
     asyncio.run(fulfill_order(session, fresh))
 
 
@@ -397,6 +398,7 @@ async def _on_paid(order_id: int, tx_hash: str | None, bot_id: int):
         # from ..services.fulfillment import fulfill_order
 
         # await fulfill_order(session, fresh)
+        print(2)
         q = await get_queue()
         q.enqueue(task_wrapper, session, fresh)
 

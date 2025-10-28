@@ -46,6 +46,7 @@ async def fulfill_order(session: AsyncSession, order: Order) -> Tuple[bool, str]
         return False, msg
 
     try:
+        print(4)
         if order.type == "stars":
             qty = int(order.amount or 0)
             if qty <= 0:
@@ -78,6 +79,7 @@ async def fulfill_order(session: AsyncSession, order: Order) -> Tuple[bool, str]
             return False, msg
 
     except Exception as e:
+        print(5)
         # сюда попадём, если Fragment API вернул 4xx/5xx или ошибка сети/валидации
         err = {"error": str(e)}
         msg = f"❌ Не удалось выполнить заказ через Fragment: {e}"
