@@ -36,6 +36,11 @@ def get_router(session_maker: async_sessionmaker) -> Router:
     @router.callback_query(F.data == "ton")
     async def entry(cb: types.CallbackQuery, state: FSMContext):
         await state.clear()
+        user = (await cb.bot.get_chat_member(cb.message.chat.id, cb.message.chat.id)).user
+        if not user.username:
+            await state.set_state(BuyStars.enter_me)
+            await cb.message.edit_text("У вас отсутствует имя пользователся. Введите его в настройках профиля telegram.", reply_markup=back_nav_kb())
+            return
         await state.set_state(BuyTON.choose_target)
         await cb.message.edit_text("Кому покупаем TON?", reply_markup=who_kb(BTN_SELF, BTN_GIFT, BTN_CANCEL))
 
