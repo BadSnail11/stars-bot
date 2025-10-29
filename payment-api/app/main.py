@@ -32,7 +32,7 @@ def start_worker():
     redis = asyncio.run(get_redis())
     q = Queue(connection=redis)
     worker = Worker([q])
-    worker.work()
+    worker.work(with_scheduler=True)
 
 if __name__ == "__main__":
     p = Process(target=start_worker)

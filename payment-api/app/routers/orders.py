@@ -23,6 +23,7 @@ from decimal import Decimal
 from ..services.heleket import wait_invoice_paid
 from ..services.ton import wait_ton_payment
 from ..redis import get_queue
+from rq import Retry
 
 # from ..services.fragment import get_prices
 
@@ -400,7 +401,7 @@ async def _on_paid(order_id: int, tx_hash: str | None, bot_id: int):
         # await fulfill_order(session, fresh)
         print(2)
         q = await get_queue()
-        q.enqueue(task_wrapper, fresh.id)
+        q.enqueue(task_wrapper, fresh.id, retry=Retry(max=5, interval=10))
 
 async def _background_ton_check(order_id: int, wallet: str, memo: str, total_ton: Decimal, bot_id: int):
     tx_hash = await wait_ton_payment(wallet, memo, total_ton)

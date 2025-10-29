@@ -9,6 +9,7 @@ from ..db import SessionLocal
 from ..repositories.orders import OrdersRepo
 from ..models import Order
 from .fragment import buy_stars, buy_premium, buy_ton
+from rq import Retry
 
 async def _save_result(session: AsyncSession, order_id: int, ok: bool, text: str, result_json: dict | None):
     # message — для пользователя; gateway_payload.result — сырой ответ API
@@ -92,5 +93,6 @@ async def fulfill_order(order_id: int) -> Tuple[bool, str]:
             msg = f"❌ Не удалось выполнить заказ через Fragment: {e}"
             await _save_result(session, order.id, False, msg, err)
             q = await get_queue()
-            q.enqueue(task_wrapper, order_id)
-            return False, msg
+            q.enqueue(task_wrapper, order_id, retry=Retry(max=5, interval=10))
+            raise e
+            # return False, msg
