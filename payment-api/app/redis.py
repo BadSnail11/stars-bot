@@ -10,7 +10,7 @@ def get_redis_url() -> str:
 async def get_redis() -> Redis:
     global _redis
     if _redis is None:
-        _redis = Redis.from_url(get_redis_url(), decode_responses=True)
+        _redis = Redis.from_url(get_redis_url())
     return _redis
 
 async def close_redis():
