@@ -41,7 +41,7 @@ async def fulfill_order(order_id: int) -> Tuple[bool, str]:
     # recipient = (order.recipient or order.username or "").strip()
     async with SessionLocal() as session:
         orders = OrdersRepo(session)
-        order = orders.get_by_id(order_id)
+        order = await orders.get_by_id(order_id)
         if order.recipient:
             recipient = order.recipient[1::].strip()
         else:
