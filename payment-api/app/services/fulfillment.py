@@ -53,7 +53,6 @@ async def fulfill_order(order_id: int) -> Tuple[bool, str]:
             return False, msg
 
         try:
-            print(2/0)
             print(4)
             if order.type == "stars":
                 qty = int(order.amount or 0)
