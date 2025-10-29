@@ -90,6 +90,6 @@ async def fulfill_order(order_id: int) -> Tuple[bool, str]:
             err = {"error": str(e)}
             msg = f"❌ Не удалось выполнить заказ через Fragment: {e}"
             await _save_result(session, order.id, False, msg, err)
-            q = await get_queue()
-            q.enqueue(task_wrapper, order_id)
+            # q = await get_queue()
+            # q.enqueue(task_wrapper, order_id)
             return False, msg

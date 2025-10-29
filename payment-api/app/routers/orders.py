@@ -378,7 +378,7 @@ async def get_order_status(order_id: int):
 
 def task_wrapper(order_id):
     print(3)
-    asyncio.run(fulfill_order(order_id))
+    asyncio.run(fulfill_order(int(order_id)))
 
 
 async def _on_paid(order_id: int, tx_hash: str | None, bot_id: int):
