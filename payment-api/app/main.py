@@ -7,6 +7,8 @@ import asyncio
 from multiprocessing import Process
 from .services.pricing import update_ton_price
 from rq import Worker, Queue
+from .services.fulfillment import fulfill_order
+import json
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -24,6 +26,7 @@ app = FastAPI(title="Payment API", lifespan=lifespan)
 app.include_router(orders.router)
 app.include_router(withdrawals.router)
 # app.include_router(callbacks.router)  # если используешь вебхуки
+
 
 def start_worker():
     redis = asyncio.run(get_redis())

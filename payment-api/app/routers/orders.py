@@ -376,9 +376,9 @@ async def get_order_status(order_id: int):
 
 # ==== фоновые операции ====
 
-def task_wrapper(session, fresh):
+def task_wrapper(order_id):
     print(3)
-    asyncio.run(fulfill_order(session, fresh))
+    asyncio.run(fulfill_order(order_id))
 
 
 async def _on_paid(order_id: int, tx_hash: str | None, bot_id: int):
@@ -400,7 +400,7 @@ async def _on_paid(order_id: int, tx_hash: str | None, bot_id: int):
         # await fulfill_order(session, fresh)
         print(2)
         q = await get_queue()
-        q.enqueue(task_wrapper, session, fresh)
+        q.enqueue(task_wrapper, fresh.id)
 
 async def _background_ton_check(order_id: int, wallet: str, memo: str, total_ton: Decimal, bot_id: int):
     tx_hash = await wait_ton_payment(wallet, memo, total_ton)
